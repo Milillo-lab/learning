@@ -176,8 +176,8 @@ function drawAxis(){
 
   // zone captions (inside the shaded forbidden zones, clear of every bound label)
   x.font='500 16px "JetBrains Mono", monospace';
-  x.textAlign='left';  x.fillStyle=lay; x.fillText('azimuth aliasing', m.l+8, y+40);
-  x.textAlign='right'; x.fillStyle=sh;  x.fillText('range ambiguity', m.l+axW-8, y+40);
+  x.textAlign='left';  x.fillStyle=lay; x.fillText('azimuth aliasing', m.l+8, y-26);
+  x.textAlign='right'; x.fillStyle=sh;  x.fillText('range ambiguity', m.l+axW-8, y-26);
 
   // bounds (both labelled ABOVE the axis, sub-line under the name)
   function bound(p,col,label,sub){
