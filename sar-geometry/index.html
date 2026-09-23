@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAR Geometry</title>
+<meta name="description" content="Interactive exercises for SAR acquisition geometry: look angle, incidence, slant vs ground range, foreshortening, layover and shadow, and ellipsoid geocoding. Built for CIVE 6359 from the Umbra archive.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --los-soft:#F3E2D0; --track:#0D6379; --track-soft:#D6EAF0;
+  --layover:#B93C18; --shadow:#3B4263; --good:#1D6F4A;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --los-soft:#3A2C1A; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9; --good:#5CC494;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --los-soft:#3A2C1A; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9; --good:#5CC494;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:940px; margin:0 auto; padding:26px 22px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+.themebtn:hover{color:var(--ink); border-color:var(--faint)}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:66ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:44px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+h3{font-size:20px; margin:22px 0 6px}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; color:var(--ink); margin:12px 0; display:inline-block}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px}
+@media (max-width:720px){ .grid{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:18px 18px 16px; display:flex; flex-direction:column}
+.card .tag{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--track)}
+.card .tag.data{color:var(--los)}
+.card h3{margin:8px 0 4px; font-size:19px}
+.card p{font-family:Newsreader,Georgia,serif; font-size:15.5px; color:var(--muted); margin:6px 0 12px; flex:1}
+.go{align-self:flex-start; font-family:"JetBrains Mono",monospace; font-size:12px; text-decoration:none; color:#fff; background:var(--track); padding:8px 14px; border-radius:7px}
+.go:hover{filter:brightness(1.08)}
+.ex{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:12px 14px; margin-top:12px}
+.ex .h{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+.ex ol{margin:0; padding-left:18px} .ex li{font-family:Newsreader,Georgia,serif; font-size:14.5px; margin:5px 0}
+.pill{display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px; margin-right:6px}
+.refresh{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); padding:16px 18px; margin:12px 0}
+.refresh summary{cursor:pointer; font-weight:600; font-size:16px; list-style:none}
+.refresh summary::-webkit-details-marker{display:none}
+.refresh summary::before{content:"\25B8 "; color:var(--track)}
+.refresh[open] summary::before{content:"\25BE "}
+.refresh .body{margin-top:10px}
+.foot{margin-top:46px; padding-top:16px; border-top:1px solid var(--rule); font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.foot code{font-family:"JetBrains Mono",monospace; font-size:12px}
+kbd{font-family:"JetBrains Mono",monospace; font-size:12px; background:var(--panel-2); border:1px solid var(--rule); border-radius:4px; padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="crumb"><a href="../index.html">Learning</a> / SAR Geometry</div>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>SAR Geometry</h1>
+  <p class="lede">A radar image is built from <em>range</em> and <em>Doppler</em>, not from a camera&rsquo;s angles. That one fact reshapes everything you see: mountains lean toward the sensor, slopes brighten or vanish, and a summit is drawn where its <em>echo</em> lands, not where it stands. These four exercises let you steer the geometry yourself &mdash; two on real Umbra scenes, two on the equations behind them.</p>
+
+  <h2>Start here &mdash; the ideas in one screen</h2>
+  <p class="serif">Read these before you open the exercises. Each is a paragraph, not a lecture; the exercises are where they stick.</p>
+
+  <details class="refresh"><summary>Look angle, incidence angle, and why they differ</summary>
+  <div class="body">
+    <p class="serif">The <b>look angle</b> &theta;<sub>L</sub> is measured at the satellite, from straight down (nadir) to the line of sight. The <b>incidence angle</b> &theta;<sub>i</sub> is measured at the ground, between the incoming ray and the local vertical. On a flat Earth they are equal; on the real, curved Earth the surface tilts away under the beam, so &theta;<sub>i</sub> is always a few degrees larger than &theta;<sub>L</sub>. Incidence &mdash; not look angle &mdash; is what controls brightness, shadowing, and how slant range maps to the ground.</p>
+    <div class="eq">sin&thinsp;&theta;<sub>i</sub> = (R<sub>e</sub>+H)/R<sub>e</sub> &middot; sin&thinsp;&theta;<sub>L</sub></div>
+  </div></details>
+
+  <details class="refresh"><summary>Slant range vs ground range, and resolution</summary>
+  <div class="body">
+    <p class="serif">The radar measures distance <em>along the line of sight</em> &mdash; slant range. Range resolution is set by the pulse bandwidth alone, &rho;<sub>r</sub> = c/(2B), and it is constant across the swath. But projected onto the ground it is stretched by 1/sin&thinsp;&theta;<sub>i</sub>, so the near edge (small &theta;<sub>i</sub>) always resolves more coarsely than the far edge. This is why a single SAR strip is sharper on its far side.</p>
+    <div class="eq">&rho;<sub>r</sub> = c/(2B) &nbsp;&middot;&nbsp; &rho;<sub>ground</sub> = c/(2B&thinsp;sin&thinsp;&theta;<sub>i</sub>)</div>
+  </div></details>
+
+  <details class="refresh"><summary>Foreshortening, layover, shadow</summary>
+  <div class="body">
+    <p class="serif">Because pixels are ordered by range, a slope facing the radar is compressed &mdash; <b><span class="pill" style="background:var(--los)"></span>foreshortening</b>, and it happens on every slope. Push the foreslope past the incidence angle and the order flips: the top is <em>closer</em> in range than the base, so it is drawn in front of it &mdash; <b><span class="pill" style="background:var(--layover)"></span>layover</b>. On the back side, when the slope is steeper than 90&deg;&minus;&theta;<sub>i</sub>, the beam skips over it entirely and leaves a <b><span class="pill" style="background:var(--shadow)"></span>shadow</b> with no return. Layover and shadow are geometric and irreparable &mdash; you plan the acquisition to avoid them, you don&rsquo;t fix them afterward.</p>
+  </div></details>
+
+  <details class="refresh"><summary>Where the summit lands &mdash; ellipsoid geocoding</summary>
+  <div class="body">
+    <p class="serif">A geocoded-ellipsoid (GEC) product places every pixel by range, assuming the ground sits on a smooth ellipsoid. Real terrain has height h above that reference, and a point that high is nearer in range than the ellipsoid assumes, so the geocoder puts it <em>toward the radar</em> by a horizontal displacement that grows with height and with how shallow the look is. That is the whole reason terrain correction (an RTC or DEM-based geocode) exists.</p>
+    <div class="eq">&Delta;x = &minus;(h &minus; h<sub>ref</sub>) &middot; cot&thinsp;&theta;<sub>i</sub></div>
+  </div></details>
+
+  <h2>The exercises</h2>
+  <div class="grid">
+
+    <div class="card">
+      <span class="tag data">Real Umbra scenes</span>
+      <h3>Look Angle</h3>
+      <p>Eleven real X-band spotlight scenes. Draw the flight direction, the line of sight, and the layover direction straight onto the amplitude image; the tool marks you against that scene&rsquo;s own recorded geometry.</p>
+      <div class="ex"><div class="h">Change &middot; record &middot; answer</div><ol>
+        <li>Pick three scenes with different squint values. For each, <em>before</em> pressing <kbd>Load this scene&rsquo;s angles</kbd>, predict the layover direction and draw it.</li>
+        <li>Record the look angle and the signed squint the tool reveals. Which way does negative squint point along the track?</li>
+        <li>Open the 3D acquisition view and <kbd>Spin</kbd> it: state, in one sentence, why look angle and incidence are not the same number.</li>
+      </ol></div>
+      <a class="go" href="look-angle/index.html">Open Look Angle &rarr;</a>
+    </div>
+
+    <div class="card">
+      <span class="tag data">Real Umbra scenes</span>
+      <h3>Where the Summit Lands</h3>
+      <p>Nineteen acquisitions over Fuego, Nevado del Ruiz, Gamalama and EEFIT Quimbaya, each with seven pixel-registered layers. Click any point on the topography and the tool shows where the geocoded product actually puts it &mdash; and why.</p>
+      <div class="ex"><div class="h">Change &middot; record &middot; answer</div><ol>
+        <li>Pick one volcano. Step the <kbd>Overlay</kbd> from topography &rarr; simulation &rarr; layover mask. Click the summit and record where it lands and the displacement.</li>
+        <li>Switch between two acquisitions of the same volcano taken from different look directions. Does the summit lean the same way? Explain in terms of &theta;<sub>i</sub>.</li>
+        <li>Find a slope that shows layover in one scene but only foreshortening in another. What changed &mdash; the terrain, or the geometry?</li>
+      </ol></div>
+      <a class="go" href="where-the-summit-lands/index.html">Open Summit &rarr;</a>
+    </div>
+
+    <div class="card">
+      <span class="tag">Parametric widget</span>
+      <h3>Look Angle, Swath &amp; Resolution</h3>
+      <p>Set the orbit altitude, look angle, beamwidth and bandwidth. Watch the swath width, the incidence angle from near to far edge, and the ground-range resolution respond in real time.</p>
+      <div class="ex"><div class="h">Change &middot; record &middot; answer</div><ol>
+        <li>Fix the beamwidth. Raise the look angle from 20&deg; to 50&deg; and record how swath width and ground-range resolution change together.</li>
+        <li>Now widen the beamwidth. What do you gain, and what do you lose at the near edge?</li>
+        <li>Switch the Earth model from spherical to flat. By how many degrees does the incidence estimate move?</li>
+      </ol></div>
+      <a class="go" href="widgets/look-angle-swath.html">Open widget &rarr;</a>
+    </div>
+
+    <div class="card">
+      <span class="tag">Parametric widget</span>
+      <h3>PRF &amp; the Ambiguity Window</h3>
+      <p>The pulse rate must beat the Doppler bandwidth yet stay under the echo-return limit. Move the PRF into and out of the window, then shrink the antenna until no clean PRF exists at all.</p>
+      <div class="ex"><div class="h">Change &middot; record &middot; answer</div><ol>
+        <li>Find a PRF inside the window. Now lower it below 2v/L<sub>a</sub> and describe what artifact appears and why.</li>
+        <li>Widen the swath &Delta;R until the current PRF becomes range-ambiguous. Which bound moved?</li>
+        <li>Shorten the antenna until the window closes. Relate the moment it closes to the minimum-antenna-area rule.</li>
+      </ol></div>
+      <a class="go" href="widgets/prf-ambiguity.html">Open widget &rarr;</a>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <p>Imagery: Umbra X-band spotlight amplitude; optical basemap &copy; <a href="https://www.esri.com/">Esri</a> World Imagery; topography from the <a href="https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model">Copernicus GLO-30</a> DEM. Built for <b>CIVE 6359 &mdash; SAR Remote Sensing</b>, University of Houston, RiSE Lab. The two scene exercises need to be served over HTTP (they read pixel heights from the image); opening this page from a web address handles that automatically.</p>
+  </div>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nt=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){}
+});
+</script>
+</body>
+</html>

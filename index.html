@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning &mdash; RiSE Lab</title>
+<meta name="description" content="Interactive learning modules from the RiSE Lab at the University of Houston, built for CIVE 6359 (SAR Remote Sensing).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF; --track:#0D6379; --track-soft:#D6EAF0;
+  --los:#A9500F; --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --track:#4BC6DD; --track-soft:#12303A; --los:#F0A143;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --track:#4BC6DD; --track-soft:#12303A; --los:#F0A143;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:860px; margin:0 auto; padding:30px 22px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px}
+.brand{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:36px; margin:12px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:62ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+.mod{display:flex; gap:18px; align-items:stretch; background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:20px; text-decoration:none; color:inherit; transition:border-color .12s, transform .12s}
+.mod:hover{border-color:var(--track); transform:translateY(-1px)}
+.mod .swatch{flex:0 0 84px; border-radius:9px; background:linear-gradient(135deg,var(--track),var(--los)); display:flex; align-items:center; justify-content:center; color:#fff; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.06em}
+.mod h3{margin:0 0 4px; font-size:21px}
+.mod p{margin:0; font-family:Newsreader,Georgia,serif; font-size:16px; color:var(--muted); max-width:56ch}
+.mod .meta{margin-top:8px; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint)}
+.foot{margin-top:44px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="brand">RiSE Lab &middot; University of Houston</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Learning</h1>
+  <p class="lede">Interactive modules from the RiSE Lab for hands-on radar remote sensing. Each one pairs the underlying theory with something you can steer yourself &mdash; on real satellite data where possible.</p>
+
+  <h2>Modules</h2>
+  <a class="mod" href="sar-geometry/index.html">
+    <div class="swatch">SAR</div>
+    <div>
+      <h3>SAR Geometry</h3>
+      <p>Look angle, incidence, slant vs ground range, foreshortening, layover and shadow, and ellipsoid geocoding &mdash; four exercises, two on real Umbra scenes and two on the equations.</p>
+      <div class="meta">CIVE 6359 &middot; 4 activities</div>
+    </div>
+  </a>
+
+  <p class="foot">Built for CIVE 6359 &mdash; SAR Remote Sensing. More modules to come.</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nt=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){}
+});
+</script>
+</body>
+</html>

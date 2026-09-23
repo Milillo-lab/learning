@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRF &amp; the Ambiguity Window</title>
+<meta name="description" content="A parametric SAR timing explorer: the PRF must stay above the Doppler bandwidth to avoid azimuth aliasing and below the echo-return limit to avoid range ambiguity, and the antenna must be large enough to leave a window at all.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0;
+  --layover:#B93C18; --shadow:#3B4263;
+  --good:#1D6F4A; --warn:#8A6410; --bad:#A32F20;
+  --stage:#20262E; --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:9px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9;
+  --good:#5CC494; --warn:#E0B355; --bad:#F0806E; --stage:#0A0E13;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9;
+  --good:#5CC494; --warn:#E0B355; --bad:#F0806E; --stage:#0A0E13;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px; margin:0 auto; padding:22px 20px 64px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
+h1{font-size:26px; margin:6px 0 0; letter-spacing:-.01em}
+.sub{font-family:Newsreader,Georgia,serif; font-size:16px; color:var(--muted); margin:6px 0 0; max-width:70ch}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+.themebtn:hover{color:var(--ink); border-color:var(--faint)}
+.main{display:grid; grid-template-columns:1fr 340px; gap:18px; margin-top:20px}
+@media (max-width:940px){ .main{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1)}
+.stage{background:var(--stage); border-radius:var(--r); overflow:hidden}
+canvas{display:block; width:100%; height:auto}
+.controls{padding:16px}
+.controls h2{font-size:12px; font-family:"JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 12px}
+.ctl{margin:0 0 15px}
+.ctl .lab{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px}
+.ctl .name{font-size:13px} .ctl .val{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--track); font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--track); cursor:pointer}
+.seg{display:flex; gap:4px; margin-top:4px}
+.seg button{flex:1; font-family:"JetBrains Mono",monospace; font-size:10.5px; padding:6px 4px; border:1px solid var(--rule); background:var(--panel-2); color:var(--muted); border-radius:6px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--track); color:#fff; border-color:var(--track)}
+.readout{padding:16px; border-top:1px solid var(--rule-soft)}
+.rowk{display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:13px; border-bottom:1px dashed var(--rule-soft)}
+.rowk:last-child{border-bottom:0}
+.rowk .k{color:var(--muted)} .rowk .v{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums}
+.status{margin:14px 16px; padding:12px 14px; border-radius:8px; font-family:Newsreader,Georgia,serif; font-size:15px; line-height:1.45}
+.status.ok{background:var(--track-soft); color:var(--track); border:1px solid var(--track)}
+.status.az{background:rgba(185,60,24,.12); color:var(--layover); border:1px solid var(--layover)}
+.status.rg{background:rgba(59,66,99,.14); color:var(--shadow); border:1px solid var(--shadow)}
+.status.no{background:rgba(163,47,32,.12); color:var(--bad); border:1px solid var(--bad)}
+.note{font-family:Newsreader,Georgia,serif; font-size:14px; line-height:1.5; color:var(--muted); padding:14px 16px; border-top:1px solid var(--rule-soft)}
+.eq{font-family:"JetBrains Mono",monospace; font-size:12px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:6px; padding:8px 10px; color:var(--ink); margin:10px 0}
+footer{margin-top:26px; font-size:12px; color:var(--faint); font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="crumb"><a href="../index.html">SAR Geometry</a> / Widget</div>
+      <h1>PRF &amp; the Ambiguity Window</h1>
+      <p class="sub">A SAR fires pulses at a pulse-repetition frequency. Too low and the along-track Doppler history aliases; too high and echoes from two pulses arrive together. The usable PRF lives in a window &mdash; and if the antenna is too small, the window closes entirely.</p>
+    </div>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="stage"><canvas id="axis" width="1600" height="620"></canvas></div>
+      <div class="card" style="margin-top:14px"><canvas id="ant" width="1600" height="420"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <h2>Platform &amp; antenna</h2>
+        <div class="ctl"><div class="lab"><span class="name">Along-track velocity &nbsp;v</span><span class="val" id="vv">7000 m/s</span></div>
+          <input type="range" id="v" min="6000" max="7800" step="10" value="7000"></div>
+        <div class="ctl"><div class="lab"><span class="name">Antenna length &nbsp;L<sub>a</sub></span><span class="val" id="vLa">12.0 m</span></div>
+          <input type="range" id="La" min="1" max="15" step="0.1" value="12"></div>
+        <div class="ctl"><div class="lab"><span class="name">Antenna height &nbsp;W<sub>a</sub></span><span class="val" id="vWa">1.0 m</span></div>
+          <input type="range" id="Wa" min="0.3" max="4" step="0.05" value="1.0"></div>
+        <div class="ctl"><div class="lab"><span class="name">Slant swath &nbsp;&Delta;R</span><span class="val" id="vdR">60 km</span></div>
+          <input type="range" id="dR" min="15" max="140" step="1" value="60"></div>
+        <div class="ctl"><div class="lab"><span class="name">PRF</span><span class="val" id="vP">1800 Hz</span></div>
+          <input type="range" id="P" min="500" max="5000" step="10" value="1800"></div>
+        <div class="ctl"><div class="lab"><span class="name">Incidence &nbsp;&theta; &nbsp;/ &nbsp;range R (for antenna rule)</span><span class="val" id="vth">38&deg; / 850 km</span></div>
+          <input type="range" id="th" min="20" max="55" step="1" value="38"></div>
+        <div class="ctl"><div class="lab"><span class="name">Band (wavelength &lambda;)</span></div>
+          <div class="seg" id="band">
+            <button data-l="0.031" aria-pressed="false">X 3.1cm</button>
+            <button data-l="0.055" aria-pressed="true">C 5.5cm</button>
+            <button data-l="0.24"  aria-pressed="false">L 24cm</button>
+          </div>
+        </div>
+      </div>
+      <div class="readout" id="ro"></div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="card"><div class="note" id="note"></div></div>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const c=299792458, $=id=>document.getElementById(id);
+let lam=0.055;
+function R_of_th(th){ // rough slant range for the antenna-area rule, from a 693km orbit
+  const Re=6371e3,H=693e3,Rs=Re+H; const inc=th*Math.PI/180;
+  // invert incidence->look for spherical: sinL = (Re/Rs) sin inc
+  const L=Math.asin((Re/Rs)*Math.sin(inc)); const psi=inc-L;
+  return Re*Math.sin(psi)/Math.sin(L);
+}
+function state(){
+  const v=+$('v').value, La=+$('La').value, Wa=+$('Wa').value, dR=+$('dR').value*1e3, P=+$('P').value, th=+$('th').value;
+  const Bdop=2*v/La;                 // Doppler bandwidth / azimuth ambiguity floor
+  const rhoA=La/2;                   // azimuth resolution
+  const Pmax=c/(2*dR);              // range ambiguity ceiling
+  const R=R_of_th(th);
+  const Amin=4*v*lam*R*Math.tan(th*Math.PI/180)/c;  // minimum antenna area
+  const A=La*Wa;
+  const winOpen = Pmax>Bdop;
+  let status='ok';
+  if(!winOpen) status='no';
+  else if(P<Bdop) status='az';
+  else if(P>Pmax) status='rg';
+  return {v,La,Wa,dR,P,th,R,Bdop,rhoA,Pmax,Amin,A,winOpen,status};
+}
+
+// ---- PRF axis with the window ----
+function drawAxis(){
+  const cv=$('axis'), x=cv.getContext('2d'); const W=cv.width,H=cv.height; x.clearRect(0,0,W,H);
+  const css=getComputedStyle(document.documentElement);
+  const ink=css.getPropertyValue('--ink'),muted=css.getPropertyValue('--muted'),rule=css.getPropertyValue('--rule');
+  const track=css.getPropertyValue('--track'),lay=css.getPropertyValue('--layover'),sh=css.getPropertyValue('--shadow'),good=css.getPropertyValue('--good'),bad=css.getPropertyValue('--bad');
+  const s=state();
+  const m={l:70,r:70}; const y=H*0.52; const axW=W-m.l-m.r;
+  const pmin=500,pmax=5000; const X=p=>m.l+(p-pmin)/(pmax-pmin)*axW;
+
+  // window band
+  const lo=Math.max(pmin,s.Bdop), hi=Math.min(pmax,s.Pmax);
+  if(s.winOpen && hi>lo){ x.fillStyle=track+'2E'; x.fillRect(X(lo),y-46,X(hi)-X(lo),92); }
+  // forbidden zones
+  x.fillStyle=lay+'22'; x.fillRect(m.l,y-46,X(Math.max(pmin,Math.min(s.Bdop,pmax)))-m.l,92);      // azimuth-alias (below Bdop)
+  x.fillStyle=sh+'22'; const hx=X(Math.max(pmin,Math.min(s.Pmax,pmax))); x.fillRect(hx,y-46,(m.l+axW)-hx,92); // range-ambig (above Pmax)
+
+  // axis line + ticks
+  x.strokeStyle=ink; x.lineWidth=3; x.beginPath(); x.moveTo(m.l,y); x.lineTo(m.l+axW,y); x.stroke();
+  x.fillStyle=muted; x.font='400 20px "JetBrains Mono", monospace'; x.textAlign='center';
+  for(let p=1000;p<=5000;p+=1000){ x.strokeStyle=rule; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(p),y-8); x.lineTo(X(p),y+8); x.stroke(); x.fillText(p,X(p),y+34); }
+  x.fillText('PRF (Hz) →', m.l+axW-10, y+34);
+
+  // bounds
+  function bound(p,col,label,sub,dir){
+    if(p<pmin||p>pmax){ // off-scale arrow
+      const edge = p<pmin? m.l : m.l+axW; x.fillStyle=col; x.font='600 20px Archivo, sans-serif'; x.textAlign=p<pmin?'left':'right';
+      x.fillText(label+' '+(p/1000).toFixed(1)+'k '+(p<pmin?'←':'→'), p<pmin?m.l+6:m.l+axW-6, y-58); return;
+    }
+    x.strokeStyle=col; x.lineWidth=3; x.beginPath(); x.moveTo(X(p),y-52); x.lineTo(X(p),y+52); x.stroke();
+    x.fillStyle=col; x.textAlign='center'; x.font='600 21px Archivo, sans-serif';
+    x.fillText(label, X(p), dir<0?y-78:y+78);
+    x.font='500 17px "JetBrains Mono", monospace'; x.fillText(sub, X(p), dir<0?y-58:y+98);
+  }
+  bound(s.Bdop, lay, 'azimuth floor', s.Bdop.toFixed(0)+' Hz = 2v/Lₐ', -1);
+  bound(s.Pmax, sh,  'range ceiling', s.Pmax.toFixed(0)+' Hz = c/2ΔR', +1);
+
+  // current PRF marker
+  x.strokeStyle=s.status==='ok'?good:bad; x.lineWidth=4;
+  x.beginPath(); x.moveTo(X(s.P),y-46); x.lineTo(X(s.P),y+46); x.stroke();
+  x.fillStyle=s.status==='ok'?good:bad; x.beginPath(); x.arc(X(s.P),y-46,8,0,7); x.fill();
+  x.textAlign='center'; x.font='700 22px Archivo, sans-serif';
+  x.fillText('PRF '+s.P+' Hz', X(s.P), y-118<0? y+130 : y-118);
+
+  // zone captions
+  x.font='500 18px "JetBrains Mono", monospace'; x.textAlign='left';
+  x.fillStyle=lay; x.fillText('azimuth aliasing', m.l+8, y-64+ (0));
+  x.fillStyle=sh;  x.textAlign='right'; x.fillText('range ambiguity', m.l+axW-8, y-64);
+  x.textAlign='left'; x.fillStyle=ink; x.font='400 18px "JetBrains Mono", monospace';
+  x.fillText('the usable PRF is the strip between the two bounds', m.l, H-18);
+}
+
+// ---- antenna area rule ----
+function drawAnt(){
+  const cv=$('ant'),x=cv.getContext('2d'); const W=cv.width,H=cv.height; x.clearRect(0,0,W,H);
+  const css=getComputedStyle(document.documentElement);
+  const ink=css.getPropertyValue('--ink'),muted=css.getPropertyValue('--muted'),rule=css.getPropertyValue('--rule'),track=css.getPropertyValue('--track'),good=css.getPropertyValue('--good'),bad=css.getPropertyValue('--bad');
+  const s=state();
+  // draw actual antenna rectangle vs required min-area rectangle (same height Wa), scaled
+  const cx=W*0.30, cy=H*0.52; const px=42; // px per metre
+  // actual
+  const aw=s.La*px, ah=s.Wa*px;
+  x.fillStyle=track+'33'; x.strokeStyle=track; x.lineWidth=3;
+  x.fillRect(cx-aw/2, cy-ah/2, aw, ah); x.strokeRect(cx-aw/2, cy-ah/2, aw, ah);
+  x.fillStyle=ink; x.font='600 20px Archivo, sans-serif'; x.textAlign='center';
+  x.fillText('antenna  Lₐ×Wₐ = '+s.A.toFixed(1)+' m²', cx, cy-ah/2-16);
+  // required min length at same height
+  const needL=s.Amin/s.Wa, nw=needL*px;
+  const ok=s.A>=s.Amin;
+  x.strokeStyle=ok?good:bad; x.lineWidth=2.5; x.setLineDash([9,7]);
+  x.strokeRect(cx-nw/2, cy-ah/2-3, nw, ah+6); x.setLineDash([]);
+  x.fillStyle=ok?good:bad; x.font='500 18px "JetBrains Mono", monospace';
+  x.fillText('min area needs L ≥ '+needL.toFixed(1)+' m  (A_min = '+s.Amin.toFixed(1)+' m²)', cx, cy+ah/2+34);
+  // verdict text right side
+  x.textAlign='left'; x.font='600 22px Archivo, sans-serif'; x.fillStyle=ok?good:bad;
+  x.fillText(ok?'✓ antenna is large enough':'✗ antenna too small — no clean PRF exists', W*0.60, cy-8);
+  x.fillStyle=muted; x.font='400 16px "JetBrains Mono", monospace';
+  x.fillText('A_min = 4 v λ R tanθ / c', W*0.60, cy+22);
+}
+
+function row(k,v){return '<div class="rowk"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
+function refresh(){
+  $('vv').textContent=$('v').value+' m/s'; $('vLa').textContent=(+$('La').value).toFixed(1)+' m';
+  $('vWa').textContent=(+$('Wa').value).toFixed(2)+' m'; $('vdR').textContent=$('dR').value+' km';
+  $('vP').textContent=$('P').value+' Hz';
+  const s=state();
+  $('vth').textContent=s.th+'° / '+(s.R/1e3).toFixed(0)+' km';
+  $('ro').innerHTML =
+    row('Doppler bandwidth 2v/Lₐ', s.Bdop.toFixed(0)+' Hz')+
+    row('Azimuth resolution Lₐ/2', s.rhoA.toFixed(2)+' m')+
+    row('Range ceiling c/2ΔR', s.Pmax.toFixed(0)+' Hz')+
+    row('PRF window width', s.winOpen? (Math.max(0,s.Pmax-s.Bdop)).toFixed(0)+' Hz' : 'closed')+
+    row('Antenna area Lₐ×Wₐ', s.A.toFixed(1)+' m²')+
+    row('Minimum area A_min', s.Amin.toFixed(1)+' m²');
+  const st=$('status'); st.className='status '+s.status;
+  const msg={
+    ok:'<b>Clean acquisition.</b> The PRF sits inside the window: fast enough to sample the Doppler history (no azimuth aliasing) and slow enough that each echo returns before the next pulse (no range ambiguity).',
+    az:'<b>Azimuth aliasing.</b> PRF is below 2v/Lₐ, so the along-track Doppler spectrum folds — you get azimuth ambiguities (ghost targets displaced along track). Raise the PRF, or lengthen the antenna to lower the Doppler bandwidth.',
+    rg:'<b>Range ambiguity.</b> PRF is above c/2ΔR, so an echo from the previous pulse arrives inside this pulse’s listening window — near and far returns overlap. Lower the PRF, or narrow the swath.',
+    no:'<b>The window is closed.</b> The azimuth floor is above the range ceiling: no PRF can satisfy both at once. This is the minimum-antenna-area rule biting — enlarge the antenna (more area) or shrink the swath.'
+  };
+  st.innerHTML=msg[s.status];
+  $('note').innerHTML =
+    '<div class="eq">2v/Lₐ &nbsp;≤&nbsp; PRF &nbsp;≤&nbsp; c/(2ΔR) &nbsp;&nbsp;&middot;&nbsp;&nbsp; ρₐ = Lₐ/2 &nbsp;&nbsp;&middot;&nbsp;&nbsp; A ≥ 4vλR tanθ / c</div>'+
+    'The floor and the ceiling pull in opposite directions on the antenna. A shorter antenna sharpens azimuth (ρₐ = Lₐ/2) but raises the Doppler floor; a wider swath needs a lower ceiling. The two only leave room for a PRF when the antenna area clears A_min — which is why high resolution and wide swath cannot both be pushed with a small antenna.';
+  drawAxis(); drawAnt();
+}
+['v','La','Wa','dR','P','th'].forEach(id=>$(id).addEventListener('input',refresh));
+document.querySelectorAll('#band button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#band button').forEach(o=>o.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true'); lam=+b.dataset.l; refresh();
+}));
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+$('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nt=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){} refresh();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refresh);
+$('foot').textContent='RiSE Lab · CIVE 6359 · c = 299,792,458 m/s';
+refresh();
+</script>
+</body>
+</html>

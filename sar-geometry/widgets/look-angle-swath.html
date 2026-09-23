@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Look Angle, Swath &amp; Resolution</title>
+<meta name="description" content="A parametric SAR side-looking geometry explorer: altitude, look angle and bandwidth set the swath, the incidence angle across it, and the ground-range resolution.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2;  --panel:#FFFFFF;   --panel-2:#F3F6F9;
+  --ink:#131A22;     --muted:#5B6875;   --faint:#8A95A1;
+  --rule:#CFD7E0;    --rule-soft:#E2E8EF;
+  --los:#A9500F;     --los-soft:#F3E2D0;
+  --track:#0D6379;   --track-soft:#D6EAF0;
+  --layover:#B93C18; --shadow:#3B4263;
+  --good:#1D6F4A;    --warn:#8A6410;    --bad:#A32F20;
+  --stage:#20262E;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05);
+  --r:9px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218;  --panel:#151C25;  --panel-2:#1B242F;
+  --ink:#E4EAF1;     --muted:#93A0AE;  --faint:#6C7A88;
+  --rule:#28323E;    --rule-soft:#1F2833;
+  --los:#F0A143;     --los-soft:#3A2C1A;
+  --track:#4BC6DD;   --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9;
+  --good:#5CC494;    --warn:#E0B355;   --bad:#F0806E;
+  --stage:#0A0E13;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218;  --panel:#151C25;  --panel-2:#1B242F;
+  --ink:#E4EAF1;     --muted:#93A0AE;  --faint:#6C7A88;
+  --rule:#28323E;    --rule-soft:#1F2833;
+  --los:#F0A143;     --los-soft:#3A2C1A;
+  --track:#4BC6DD;   --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9;
+  --good:#5CC494;    --warn:#E0B355;   --bad:#F0806E;
+  --stage:#0A0E13;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink);
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px; margin:0 auto; padding:22px 20px 64px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
+h1{font-size:26px; margin:6px 0 0; letter-spacing:-.01em}
+.sub{font-family:Newsreader,Georgia,serif; font-size:16px; color:var(--muted); margin:6px 0 0; max-width:70ch}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+.themebtn:hover{color:var(--ink); border-color:var(--faint)}
+.main{display:grid; grid-template-columns:1fr 340px; gap:18px; margin-top:20px}
+@media (max-width:940px){ .main{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1)}
+.stage{background:var(--stage); border-radius:var(--r); overflow:hidden}
+canvas{display:block; width:100%; height:auto}
+.controls{padding:16px}
+.controls h2{font-size:12px; font-family:"JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 12px}
+.ctl{margin:0 0 15px}
+.ctl .lab{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px}
+.ctl .name{font-size:13px} .ctl .val{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--track); font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--track); cursor:pointer}
+.seg{display:flex; gap:4px; margin-top:4px}
+.seg button{flex:1; font-family:"JetBrains Mono",monospace; font-size:10.5px; padding:6px 4px; border:1px solid var(--rule);
+  background:var(--panel-2); color:var(--muted); border-radius:6px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--track); color:#fff; border-color:var(--track)}
+.readout{padding:16px; border-top:1px solid var(--rule-soft)}
+.rowk{display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:13px; border-bottom:1px dashed var(--rule-soft)}
+.rowk:last-child{border-bottom:0}
+.rowk .k{color:var(--muted)} .rowk .v{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums}
+.note{font-family:Newsreader,Georgia,serif; font-size:14px; line-height:1.5; color:var(--muted); padding:14px 16px; border-top:1px solid var(--rule-soft)}
+.eq{font-family:"JetBrains Mono",monospace; font-size:12px; background:var(--panel-2); border:1px solid var(--rule-soft);
+  border-radius:6px; padding:8px 10px; color:var(--ink); margin:10px 0}
+.flag{font-family:"JetBrains Mono",monospace; font-size:11px; padding:3px 7px; border-radius:5px}
+.flag.ok{background:var(--track-soft); color:var(--track)}
+.pill{display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:5px}
+footer{margin-top:26px; font-size:12px; color:var(--faint); font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="crumb"><a href="../index.html">SAR Geometry</a> / Widget</div>
+      <h1>Look Angle, Swath &amp; Resolution</h1>
+      <p class="sub">A radar looks sideways. The angle it looks at fixes how wide a strip it sees, how the incidence angle changes from the near edge to the far edge, and how sharp the ground-range resolution can be. Move the sliders and watch all three respond.</p>
+    </div>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="stage"><canvas id="geo" width="1600" height="900"></canvas></div>
+      <div class="card" style="margin-top:14px"><canvas id="res" width="1600" height="460"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <h2>Acquisition</h2>
+        <div class="ctl">
+          <div class="lab"><span class="name">Orbit altitude &nbsp;H</span><span class="val" id="vH">600 km</span></div>
+          <input type="range" id="H" min="400" max="800" step="5" value="600">
+        </div>
+        <div class="ctl">
+          <div class="lab"><span class="name">Look angle &nbsp;&theta;<sub>L</sub> (centre)</span><span class="val" id="vL">34&deg;</span></div>
+          <input type="range" id="L" min="15" max="55" step="0.5" value="34">
+        </div>
+        <div class="ctl">
+          <div class="lab"><span class="name">Elevation beamwidth &nbsp;&Delta;&theta;</span><span class="val" id="vBw">3.0&deg;</span></div>
+          <input type="range" id="Bw" min="0.5" max="8" step="0.1" value="3">
+        </div>
+        <div class="ctl">
+          <div class="lab"><span class="name">Range bandwidth &nbsp;B</span><span class="val" id="vB">300 MHz</span></div>
+          <input type="range" id="B" min="10" max="1200" step="10" value="300">
+        </div>
+        <div class="ctl">
+          <div class="lab"><span class="name">Earth model</span></div>
+          <div class="seg" id="earth">
+            <button data-e="sphere" aria-pressed="true">Spherical</button>
+            <button data-e="flat" aria-pressed="false">Flat</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="readout" id="ro"></div>
+      <div class="note" id="teachnote"></div>
+    </div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const Re = 6371.0;          // km, mean Earth radius
+const c  = 299792.458;      // km/s
+const $ = id => document.getElementById(id);
+
+// ---- spherical side-looking geometry ----
+// Given altitude H (km) and look angle thetaL (rad from nadir), return incidence,
+// central angle, slant range (km), ground range along surface (km).
+function geom(H, thetaL, model){
+  if(model==='flat'){
+    const inc = thetaL;                  // flat Earth: incidence == look angle
+    const R = H/Math.cos(thetaL);        // slant range
+    const gr = H*Math.tan(thetaL);       // ground range from nadir
+    return {inc, psi:0, R, gr};
+  }
+  const Rs = Re + H;
+  const s = (Rs/Re)*Math.sin(thetaL);
+  const inc = Math.asin(Math.min(1, s));     // incidence at surface
+  const psi = inc - thetaL;                  // Earth-central angle
+  const R   = Re*Math.sin(psi)/Math.sin(thetaL); // slant range (law of sines)
+  const gr  = Re*psi;                          // ground range along the arc
+  return {inc, psi, R, gr};
+}
+function deg(x){return x*180/Math.PI} function rad(x){return x*Math.PI/180}
+
+let model='sphere';
+
+function state(){
+  const H=+$('H').value, L=+$('L').value, Bw=+$('Bw').value, B=+$('B').value;
+  const near = geom(H, rad(L-Bw/2), model);
+  const cen  = geom(H, rad(L),      model);
+  const far  = geom(H, rad(L+Bw/2), model);
+  const swath = Math.abs(far.gr - near.gr);        // ground swath width, km
+  const dsr = c/(2*B*1e6)*1e3;                      // slant-range res, m (B in Hz)
+  const dgrNear = dsr/Math.sin(near.inc);
+  const dgrFar  = dsr/Math.sin(far.inc);
+  return {H,L,Bw,B,near,cen,far,swath,dsr,dgrNear,dgrFar};
+}
+
+// ---------- main geometry drawing ----------
+function drawGeo(){
+  const cv=$('geo'), x=cv.getContext('2d');
+  const W=cv.width, Hh=cv.height; x.clearRect(0,0,W,Hh);
+  const css=getComputedStyle(document.documentElement);
+  const ink=css.getPropertyValue('--ink'), muted=css.getPropertyValue('--muted');
+  const los=css.getPropertyValue('--los'), track=css.getPropertyValue('--track');
+  const rule=css.getPropertyValue('--rule'), good=css.getPropertyValue('--good');
+  const s=state();
+
+  // schematic (not to scale): satellite near top, ground line low, LOS rays at real angles
+  const satX=W*0.30, satY=Hh*0.12;
+  const groundY=Hh*0.80;
+  // vertical (nadir) reference
+  x.strokeStyle=rule; x.lineWidth=2; x.setLineDash([7,7]);
+  x.beginPath(); x.moveTo(satX,satY); x.lineTo(satX,groundY+40); x.stroke(); x.setLineDash([]);
+  // ground
+  x.strokeStyle=ink; x.lineWidth=3;
+  x.beginPath(); x.moveTo(W*0.04,groundY); x.lineTo(W*0.98,groundY); x.stroke();
+
+  // ray helper: draw from sat at look angle L (deg from vertical), length to ground
+  function ray(Ldeg, col, lw){
+    const a=rad(Ldeg);
+    const len=(groundY-satY)/Math.cos(a);
+    const gx=satX+len*Math.sin(a), gy=satY+len*Math.cos(a);
+    x.strokeStyle=col; x.lineWidth=lw;
+    x.beginPath(); x.moveTo(satX,satY); x.lineTo(gx,gy); x.stroke();
+    return {gx,gy};
+  }
+  const pn=ray(s.L-s.Bw/2, los, 3);
+  const pf=ray(s.L+s.Bw/2, los, 3);
+  ray(s.L, track, 2.2); // centre LOS
+
+  // swath shading on ground
+  x.fillStyle=track+'33';
+  x.fillRect(pn.gx, groundY-9, (pf.gx-pn.gx), 18);
+  x.fillStyle=track;
+  [pn.gx,pf.gx].forEach(gx=>{x.fillRect(gx-1.5,groundY-11,3,22)});
+
+  // satellite
+  x.fillStyle=ink; x.beginPath(); x.arc(satX,satY,9,0,7); x.fill();
+  x.fillStyle=track; x.fillRect(satX-16,satY-5,10,10); x.fillRect(satX+6,satY-5,10,10);
+
+  // labels
+  x.font='600 26px Archivo, sans-serif'; x.fillStyle=ink; x.textAlign='left';
+  x.fillText('satellite', satX+22, satY-6);
+  x.font='500 22px "JetBrains Mono", monospace'; x.fillStyle=muted;
+  x.fillText('H = '+s.H+' km', satX+22, satY+22);
+
+  // look-angle arc at satellite (between nadir and centre LOS)
+  x.strokeStyle=track; x.lineWidth=2.4;
+  x.beginPath(); x.arc(satX,satY,70,rad(0)-Math.PI/2, rad(s.L)-Math.PI/2); x.stroke();
+  x.fillStyle=track; x.font='600 24px Archivo, sans-serif';
+  x.fillText('θ_L '+s.L.toFixed(0)+'°', satX+52, satY+92);
+
+  // incidence angle at far ground point (between local vertical and LOS)
+  const ai=rad(s.far.inc? deg(s.far.inc):0);
+  x.strokeStyle=los; x.lineWidth=2.4; x.setLineDash([5,4]);
+  x.beginPath(); x.moveTo(pf.gx,pf.gy); x.lineTo(pf.gx,pf.gy-70); x.stroke(); x.setLineDash([]);
+  x.beginPath(); x.arc(pf.gx,pf.gy,52, -Math.PI/2, -Math.PI/2 - rad(deg(s.far.inc)), true); x.stroke();
+  x.fillStyle=los; x.font='600 22px Archivo, sans-serif'; x.textAlign='right';
+  x.fillText('θ_i '+deg(s.far.inc).toFixed(0)+'°', pf.gx-14, pf.gy-30);
+
+  // near / far edge tags + swath width
+  x.textAlign='center'; x.font='500 21px "JetBrains Mono", monospace'; x.fillStyle=muted;
+  x.fillText('near', pn.gx, groundY+34);
+  x.fillText('far',  pf.gx, groundY+34);
+  x.fillStyle=track; x.font='600 23px Archivo, sans-serif';
+  x.fillText('swath '+s.swath.toFixed(1)+' km', (pn.gx+pf.gx)/2, groundY+64);
+
+  x.textAlign='left'; x.fillStyle=muted; x.font='400 18px "JetBrains Mono", monospace';
+  x.fillText(model==='flat'?'flat-Earth schematic (θ_i = θ_L)':'spherical Earth — θ_i > θ_L by curvature', W*0.04, Hh*0.06);
+}
+
+// ---------- resolution-across-swath curve ----------
+function drawRes(){
+  const cv=$('res'), x=cv.getContext('2d');
+  const W=cv.width, H=cv.height; x.clearRect(0,0,W,H);
+  const css=getComputedStyle(document.documentElement);
+  const ink=css.getPropertyValue('--ink'), muted=css.getPropertyValue('--muted');
+  const rule=css.getPropertyValue('--rule'), track=css.getPropertyValue('--track'), los=css.getPropertyValue('--los');
+  const s=state();
+  const m={l:90,r:24,t:34,b:52};
+  const plotW=W-m.l-m.r, plotH=H-m.t-m.b;
+
+  // sample incidence + dgr across the beam
+  const n=60, xs=[], ys=[];
+  for(let i=0;i<=n;i++){
+    const Ld = s.L - s.Bw/2 + s.Bw*i/n;
+    const g=geom(s.H, rad(Ld), model);
+    xs.push(g.gr); ys.push(s.dsr/Math.sin(g.inc)); // m
+  }
+  const gr0=xs[0], gr1=xs[n];
+  const ymax=Math.max(...ys)*1.12, ymin=0;
+  const X=g=> m.l + (g-gr0)/(gr1-gr0)*plotW;
+  const Y=v=> m.t + (1-(v-ymin)/(ymax-ymin))*plotH;
+
+  // axes
+  x.strokeStyle=rule; x.lineWidth=1.5;
+  x.beginPath(); x.moveTo(m.l,m.t); x.lineTo(m.l,m.t+plotH); x.lineTo(m.l+plotW,m.t+plotH); x.stroke();
+  x.fillStyle=muted; x.font='400 19px "JetBrains Mono", monospace'; x.textAlign='right';
+  for(let gv=0; gv<=4; gv++){ const v=ymax*gv/4; const yy=Y(v); x.fillText(v.toFixed(1), m.l-8, yy+6);
+    x.strokeStyle=rule; x.setLineDash([3,5]); x.beginPath(); x.moveTo(m.l,yy); x.lineTo(m.l+plotW,yy); x.stroke(); x.setLineDash([]); }
+  x.textAlign='center';
+  x.fillText('near '+gr0.toFixed(0)+' km', X(gr0)+40, m.t+plotH+34);
+  x.fillText('far '+gr1.toFixed(0)+' km', X(gr1)-30, m.t+plotH+34);
+  x.save(); x.translate(24,m.t+plotH/2); x.rotate(-Math.PI/2);
+  x.fillText('ground-range res  (m)',0,0); x.restore();
+
+  // slant-range res (constant) reference
+  x.strokeStyle=los; x.lineWidth=2; x.setLineDash([8,6]);
+  x.beginPath(); x.moveTo(m.l,Y(s.dsr)); x.lineTo(m.l+plotW,Y(s.dsr)); x.stroke(); x.setLineDash([]);
+  x.fillStyle=los; x.textAlign='left'; x.font='500 18px "JetBrains Mono", monospace';
+  x.fillText('slant-range ρ_r = '+s.dsr.toFixed(2)+' m (constant)', m.l+10, Y(s.dsr)-8);
+
+  // curve
+  x.strokeStyle=track; x.lineWidth=3.4; x.beginPath();
+  xs.forEach((g,i)=>{ const px=X(g),py=Y(ys[i]); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke();
+  // end dots
+  x.fillStyle=track;
+  [[gr0,ys[0]],[gr1,ys[n]]].forEach(p=>{x.beginPath(); x.arc(X(p[0]),Y(p[1]),5,0,7); x.fill();});
+  x.fillStyle=ink; x.textAlign='center'; x.font='600 20px Archivo, sans-serif';
+  x.fillText('ground-range resolution is worst at the near edge (small θ_i), best at the far edge', W/2, 22);
+}
+
+function fmt(v,u,d=1){return v.toFixed(d)+' '+u;}
+function refresh(){
+  $('vH').textContent=$('H').value+' km';
+  $('vL').textContent=(+$('L').value).toFixed(1)+'°';
+  $('vBw').textContent=(+$('Bw').value).toFixed(1)+'°';
+  $('vB').textContent=$('B').value+' MHz';
+  const s=state();
+  $('ro').innerHTML =
+    row('Incidence θ_i (near → far)', deg(s.near.inc).toFixed(1)+'° → '+deg(s.far.inc).toFixed(1)+'°')+
+    row('Slant range (near → far)', s.near.R.toFixed(0)+' → '+s.far.R.toFixed(0)+' km')+
+    row('Ground swath width', fmt(s.swath,'km'))+
+    row('Slant-range resolution ρ_r', fmt(s.dsr,'m',2))+
+    row('Ground-range res (near → far)', s.dgrNear.toFixed(2)+' → '+s.dgrFar.toFixed(2)+' m');
+  $('teachnote').innerHTML =
+    '<div class="eq">ρ_r = c / (2B) &nbsp;&nbsp;&middot;&nbsp;&nbsp; ρ_gr = ρ_r / sin θ_i = c / (2B sin θ_i)</div>'+
+    'Slant-range resolution depends only on bandwidth. On the ground it is stretched by 1/sin θ_i, so the same radar resolves the near edge more coarsely than the far edge. Widen the beam and the swath grows but the near edge gets worse; raise the look angle and the whole strip sharpens on the ground but the signal weakens.';
+  drawGeo(); drawRes();
+}
+function row(k,v){return '<div class="rowk"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
+
+['H','L','Bw','B'].forEach(id=>$(id).addEventListener('input',refresh));
+document.querySelectorAll('#earth button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#earth button').forEach(o=>o.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true'); model=b.dataset.e; refresh();
+}));
+
+// theme
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+$('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nt= dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){} refresh();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refresh);
+$('foot').textContent='RiSE Lab · CIVE 6359 · spherical Earth R_e = 6371 km, c = 299,792 km/s';
+refresh();
+</script>
+</body>
+</html>
