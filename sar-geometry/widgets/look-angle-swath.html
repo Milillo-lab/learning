@@ -227,9 +227,9 @@ function drawGeo(){
 
   // look-angle arc at satellite (between nadir and centre LOS)
   x.strokeStyle=track; x.lineWidth=2.4;
-  x.beginPath(); x.arc(satX,satY,70,rad(0)-Math.PI/2, rad(s.L)-Math.PI/2); x.stroke();
+  x.beginPath(); x.arc(satX,satY,70, Math.PI/2 - rad(s.L), Math.PI/2); x.stroke();
   x.fillStyle=track; x.font='600 24px Archivo, sans-serif';
-  x.fillText('θ_L '+s.L.toFixed(0)+'°', satX+52, satY+92);
+  x.fillText('θ_L '+s.L.toFixed(0)+'°', satX+30, satY+108);
 
   // incidence angle at far ground point (between local vertical and LOS)
   const ai=rad(s.far.inc? deg(s.far.inc):0);

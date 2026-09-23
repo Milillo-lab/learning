@@ -88,7 +88,7 @@ footer{margin-top:26px; font-size:12px; color:var(--faint); font-family:"JetBrai
 
   <div class="main">
     <div>
-      <div class="stage"><canvas id="axis" width="1600" height="620"></canvas></div>
+      <div class="stage"><canvas id="axis" width="1600" height="700"></canvas></div>
       <div class="card" style="margin-top:14px"><canvas id="ant" width="1600" height="420"></canvas></div>
     </div>
 
@@ -170,35 +170,36 @@ function drawAxis(){
   x.strokeStyle=ink; x.lineWidth=3; x.beginPath(); x.moveTo(m.l,y); x.lineTo(m.l+axW,y); x.stroke();
   x.fillStyle=muted; x.font='400 20px "JetBrains Mono", monospace'; x.textAlign='center';
   for(let p=1000;p<=5000;p+=1000){ x.strokeStyle=rule; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(p),y-8); x.lineTo(X(p),y+8); x.stroke(); x.fillText(p,X(p),y+34); }
-  x.fillText('PRF (Hz) →', m.l+axW-10, y+34);
+  // axis title (centred, well below the numbers)
+  x.textAlign='center'; x.fillStyle=muted; x.font='400 19px "JetBrains Mono", monospace';
+  x.fillText('pulse-repetition frequency  (Hz) →', W/2, y+66);
 
-  // bounds
-  function bound(p,col,label,sub,dir){
-    if(p<pmin||p>pmax){ // off-scale arrow
-      const edge = p<pmin? m.l : m.l+axW; x.fillStyle=col; x.font='600 20px Archivo, sans-serif'; x.textAlign=p<pmin?'left':'right';
-      x.fillText(label+' '+(p/1000).toFixed(1)+'k '+(p<pmin?'←':'→'), p<pmin?m.l+6:m.l+axW-6, y-58); return;
-    }
-    x.strokeStyle=col; x.lineWidth=3; x.beginPath(); x.moveTo(X(p),y-52); x.lineTo(X(p),y+52); x.stroke();
+  // zone captions (inside the shaded forbidden zones, clear of every bound label)
+  x.font='500 16px "JetBrains Mono", monospace';
+  x.textAlign='left';  x.fillStyle=lay; x.fillText('azimuth aliasing', m.l+8, y+40);
+  x.textAlign='right'; x.fillStyle=sh;  x.fillText('range ambiguity', m.l+axW-8, y+40);
+
+  // bounds (both labelled ABOVE the axis, sub-line under the name)
+  function bound(p,col,label,sub){
+    if(p<pmin||p>pmax){ x.fillStyle=col; x.font='600 20px Archivo, sans-serif'; x.textAlign=p<pmin?'left':'right';
+      x.fillText(label+' '+(p/1000).toFixed(1)+'k '+(p<pmin?'←':'→'), p<pmin?m.l+6:m.l+axW-6, y-64); return; }
+    x.strokeStyle=col; x.lineWidth=3; x.beginPath(); x.moveTo(X(p),y-46); x.lineTo(X(p),y+46); x.stroke();
     x.fillStyle=col; x.textAlign='center'; x.font='600 21px Archivo, sans-serif';
-    x.fillText(label, X(p), dir<0?y-78:y+78);
-    x.font='500 17px "JetBrains Mono", monospace'; x.fillText(sub, X(p), dir<0?y-58:y+98);
+    x.fillText(label, X(p), y-88);
+    x.font='500 17px "JetBrains Mono", monospace'; x.fillText(sub, X(p), y-66);
   }
-  bound(s.Bdop, lay, 'azimuth floor', s.Bdop.toFixed(0)+' Hz = 2v/Lₐ', -1);
-  bound(s.Pmax, sh,  'range ceiling', s.Pmax.toFixed(0)+' Hz = c/2ΔR', +1);
+  bound(s.Bdop, lay, 'azimuth floor', s.Bdop.toFixed(0)+' Hz = 2v/Lₐ');
+  bound(s.Pmax, sh,  'range ceiling', s.Pmax.toFixed(0)+' Hz = c/2ΔR');
 
-  // current PRF marker
+  // current PRF marker (label pinned to the very top, never colliding with bounds)
   x.strokeStyle=s.status==='ok'?good:bad; x.lineWidth=4;
   x.beginPath(); x.moveTo(X(s.P),y-46); x.lineTo(X(s.P),y+46); x.stroke();
   x.fillStyle=s.status==='ok'?good:bad; x.beginPath(); x.arc(X(s.P),y-46,8,0,7); x.fill();
-  x.textAlign='center'; x.font='700 22px Archivo, sans-serif';
-  x.fillText('PRF '+s.P+' Hz', X(s.P), y-118<0? y+130 : y-118);
+  x.textAlign='center'; x.font='700 23px Archivo, sans-serif';
+  x.fillText('PRF '+s.P+' Hz', Math.max(m.l+80,Math.min(m.l+axW-80,X(s.P))), y-150);
 
-  // zone captions
-  x.font='500 18px "JetBrains Mono", monospace'; x.textAlign='left';
-  x.fillStyle=lay; x.fillText('azimuth aliasing', m.l+8, y-64+ (0));
-  x.fillStyle=sh;  x.textAlign='right'; x.fillText('range ambiguity', m.l+axW-8, y-64);
-  x.textAlign='left'; x.fillStyle=ink; x.font='400 18px "JetBrains Mono", monospace';
-  x.fillText('the usable PRF is the strip between the two bounds', m.l, H-18);
+  x.textAlign='left'; x.fillStyle=ink; x.font='400 17px "JetBrains Mono", monospace';
+  x.fillText('the usable PRF is the green strip between the two bounds', m.l, H-18);
 }
 
 // ---- antenna area rule ----
