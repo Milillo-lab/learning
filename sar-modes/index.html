@@ -163,9 +163,9 @@ const MODES={
    tlnote:"each band lit ⅓ of the time — uniform weighting, no scalloping",
    desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from fore to aft (watch the beam pivot between the dashed fore and aft ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
    trade:"<b>Resolution:</b> coarser azimuth, but <b>uniform</b>. &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; no scalloping."},
- sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"wide transmit · narrow receive beam swept in range · pulses overlap → continuous",
-   tlnote:"every pulse lights the whole swath — no burst gaps, no coverage gaps",
-   desc:"A short antenna floods a very wide swath on transmit. On receive, a digitally formed narrow beam is swept in range to follow the returning echo down the swath (scan-on-receive). Pulses repeat at kilohertz rates under a kilometers-long footprint, so coverage is continuous and there is no burst penalty. This is how NISAR images its 240 km swath at full resolution.",
+ sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"each pulse: wide transmit, then a narrow receive beam swept in range (scan-on-receive)",
+   tlnote:"dark tick = transmit, rest = receive sweep · pulses overlap → continuous coverage",
+   desc:"A short antenna floods a very wide swath on transmit. On receive, a digitally formed narrow beam is swept in range to follow the returning echo down the swath (scan-on-receive). Watch one pulse at a time: the transmit flash covers the whole swath, then the receive beam walks from near range to far range as the echo arrives from progressively farther ground. The animation is time-stretched — in reality pulses repeat at kilohertz rates and the platform moves only a few meters between them, so coverage is continuous and there is no burst penalty. This is how NISAR images its 240 km swath at full resolution.",
    trade:"<b>Resolution:</b> full azimuth (continuous pulses). &nbsp; <b>Coverage:</b> very wide swath (240 km on NISAR). &nbsp; <b>Duty cycle:</b> 100% on the whole swath."},
 };
 const ORDER=["stripmap","spotlight","scansar","tops","sweepsar"];
@@ -277,15 +277,32 @@ function fBurst(p,tops){
   for(let bi=0;bi<nb;bi++){ const iv=[]; let x=bi*badv; while(x<T){ iv.push([x/T,Math.min(T,x+badv)/T]); x+=cycle; } rows.push({name:SUBN[bi],iv}); }
   return rows;
 }
-function fSweep(p){ const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p,LFs=5.0,sp=1.8;
-  for(let x=x0;x<=sx;x+=sp) quad(x-LFs/2,x+LFs/2,R_NEAR,R_FAR,cssv('--foot'),0.09,0.3);
-  beamVol(sx,sx-LFs/2,sx+LFs/2,R_NEAR,R_FAR,cssv('--los'),0.10);
-  quad(sx-LFs/2,sx+LFs/2,R_NEAR,R_FAR,cssv('--foot'),0.30,0.9);
-  const sw=Math.sin(p*2*Math.PI*6)*0.5+0.5, ry=R_NEAR+(R_FAR-R_NEAR)*sw;
-  beamVol(sx,sx-LFs/2,sx+LFs/2,ry-3,ry+3,cssv('--beam'),0.30);
-  quad(sx-LFs/2,sx+LFs/2,ry-3,ry+3,cssv('--beam'),0.75); sat(sx);
-  const n=Math.floor((x1-x0)/sp), ticks=[]; for(let k=0;k<=n;k++) ticks.push(k*sp/(x1-x0));
-  return [{name:"swath",iv:[[0,1]],ticks}]; }
+function dashRect(x0,x1,z0,z1,color){
+  const eg=new THREE.BufferGeometry(); eg.setAttribute('position',new THREE.Float32BufferAttribute([x0,0.12,z0,x1,0.12,z0,x1,0.12,z1,x0,0.12,z1,x0,0.12,z0],3));
+  const gl=new THREE.Line(eg,new THREE.LineDashedMaterial({color:new THREE.Color(color),dashSize:1.2,gapSize:0.8,transparent:true,opacity:0.95})); gl.computeLineDistances(); dyn.add(gl);
+}
+function fSweep(p){
+  const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p, LFs=6.0, sp=4.5, TXF=0.18, RXW=3.0, z0=R_NEAR, z1=R_FAR;
+  const k=Math.floor((sx-x0)/sp), xk=x0+k*sp, u=((sx-x0)%sp)/sp;
+  for(let j=0;j<k;j++){ const xj=x0+j*sp; quad(xj-LFs/2,xj+LFs/2,z0,z1,cssv('--foot'),0.13,0.35); }
+  if(u<TXF){
+    beamVol(sx,xk-LFs/2,xk+LFs/2,z0,z1,cssv('--los'),0.34);
+    quad(xk-LFs/2,xk+LFs/2,z0,z1,cssv('--los'),0.45,0.9);
+    steerTxt="pulse "+(k+1)+"   TX \u25AE whole swath illuminated";
+  }else{
+    const v=(u-TXF)/(1-TXF), rz=z0+RXW+(z1-z0-2*RXW)*v;
+    quad(xk-LFs/2,xk+LFs/2,z0,z1,cssv('--foot'),0.10,0.8);
+    quad(xk-LFs/2,xk+LFs/2,z0,rz-RXW,cssv('--beam'),0.22);
+    beamVol(sx,xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,cssv('--beam'),0.38);
+    quad(xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,cssv('--beam'),0.85,0.9);
+    seg([xk-LFs/2,0.15,rz],[xk+LFs/2,0.15,rz],'#ffffff',0.9);
+    dashRect(xk-LFs/2,xk+LFs/2,z0,z0+2*RXW,cssv('--beam')); dashRect(xk-LFs/2,xk+LFs/2,z1-2*RXW,z1,cssv('--beam'));
+    seg([sx,ALT,0],[xk,0,rz],cssv('--beam'),1.0); seg([sx,ALT,0],[xk,0,z0],cssv('--track'),0.35);
+    const kk=Math.round(v*10); steerTxt="pulse "+(k+1)+"   RX \u25AE receive beam sweeps  near "+"\u25AE".repeat(kk)+"\u25AF".repeat(10-kk)+" far";
+  }
+  sat(sx);
+  const n=Math.floor((x1-x0)/sp), ticks=[], tx=[]; for(let q=0;q<=n;q++){ ticks.push(q*sp/(x1-x0)); tx.push([q*sp/(x1-x0),(q*sp+TXF*sp)/(x1-x0)]); }
+  return [{name:"swath",iv:[[0,1]],ticks,tx}]; }
 const BUILD={stripmap:fStrip,spotlight:fSpot,scansar:p=>fBurst(p,false),tops:p=>fBurst(p,true),sweepsar:fSweep};
 
 /* ---------- timeline strip ---------- */
@@ -300,6 +317,7 @@ function drawTL(rows,t){
     tctx.fillStyle=cssv('--tl-bg'); tctx.fillRect(L,y,R-L,h);
     r.iv.forEach(([a,b])=>{ tctx.globalAlpha=a<=t?0.8:0.28; tctx.fillStyle=cssv('--foot'); tctx.fillRect(L+a*(R-L),y,Math.max(1,(b-a)*(R-L)),h); });
     tctx.globalAlpha=1;
+    if(r.tx){ tctx.fillStyle=cssv('--los'); tctx.globalAlpha=0.9; r.tx.forEach(([a,b])=>tctx.fillRect(L+a*(R-L),y,Math.max(1.5,(b-a)*(R-L)),h)); tctx.globalAlpha=1; }
     if(r.ticks){ tctx.strokeStyle='rgba(255,255,255,.7)'; tctx.lineWidth=1; r.ticks.forEach(x=>{ const px=L+x*(R-L); tctx.beginPath(); tctx.moveTo(px,y); tctx.lineTo(px,y+h); tctx.stroke(); }); }
     tctx.fillStyle=cssv('--muted'); tctx.textAlign='right'; tctx.fillText(r.name,L-6,y+h/2);
   });
@@ -312,7 +330,7 @@ const steerEl=document.getElementById('steer');
 function frame(now){
   const dt=(now-last)/1000; last=now;
   if(playing){ p+=dt*0.09*speed; if(p>1)p=0; scrub.value=Math.round(p*1000); }
-  clearDyn(); yq=0.05;
+  clearDyn(); yq=0.05; steerTxt="";
   const rows=BUILD[mode](p);
   bandLines.forEach(l=>l.visible=(mode==='scansar'||mode==='tops'));
   renderer.render(scene,camera); drawTL(rows,p);
