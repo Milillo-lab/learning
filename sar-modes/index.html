@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAR Acquisition Modes</title>
+<meta name="description" content="An animated explainer of the SAR acquisition modes — stripmap, spotlight, ScanSAR, TOPS and SweepSAR — showing how the beam moves over the ground and the resolution-versus-coverage trade each one makes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0;
+  --beam:#C99A2E; --foot:#B93C18; --imaged:#0D6379; --sat:#131A22;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:9px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --beam:#E7C15A; --foot:#F07A4B; --imaged:#4BC6DD; --sat:#E4EAF1;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --beam:#E7C15A; --foot:#F07A4B; --imaged:#4BC6DD; --sat:#E4EAF1;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding:22px 20px 64px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
+h1{font-size:26px; margin:6px 0 0; letter-spacing:-.01em}
+.sub{font-family:Newsreader,Georgia,serif; font-size:16px; color:var(--muted); margin:6px 0 0; max-width:72ch}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+.modes{display:flex; gap:6px; flex-wrap:wrap; margin:18px 0 12px}
+.modes button{font-family:"JetBrains Mono",monospace; font-size:12px; padding:9px 14px; border:1px solid var(--rule); background:var(--panel-2); color:var(--muted); border-radius:8px; cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--track); color:#fff; border-color:var(--track)}
+.stage{background:#0e1116; border:1px solid var(--rule); border-radius:var(--r); overflow:hidden}
+canvas{display:block; width:100%; height:auto}
+.controls{display:flex; align-items:center; gap:14px; margin:12px 0; flex-wrap:wrap}
+.controls button{font-family:"JetBrains Mono",monospace; font-size:12px; padding:8px 16px; border:1px solid var(--rule); background:var(--panel); color:var(--ink); border-radius:8px; cursor:pointer}
+.controls button:hover{border-color:var(--faint)}
+.controls .sp{display:flex; align-items:center; gap:8px; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted)}
+input[type=range]{accent-color:var(--track)}
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:18px 20px; margin-top:6px}
+.card h2{font-size:20px; margin:0 0 4px}
+.card .what{font-family:Newsreader,Georgia,serif; font-size:16.5px; line-height:1.55; color:var(--ink); margin:8px 0}
+.trade{display:flex; gap:20px; flex-wrap:wrap; margin-top:12px}
+.trade div{flex:1; min-width:180px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 12px}
+.trade .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.trade .v{font-size:14.5px; margin-top:3px}
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin:10px 2px 0; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.sw{width:12px; height:12px; border-radius:3px; display:inline-block}
+footer{margin-top:26px; font-size:12px; color:var(--faint); font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="crumb"><a href="../index.html">Learning</a> / SAR Acquisition Modes</div>
+      <h1>SAR Acquisition Modes</h1>
+      <p class="sub">A radar builds an image while it flies. What it points its beam at as it goes — held fixed, steered onto one spot, hopped between swaths, or swept on receive — is the difference between the acquisition modes, and it sets the trade between resolution and coverage. Pick a mode and watch the beam.</p>
+    </div>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+
+  <div class="modes" id="modes">
+    <button data-m="stripmap" aria-pressed="true">Stripmap</button>
+    <button data-m="spotlight" aria-pressed="false">Spotlight</button>
+    <button data-m="scansar" aria-pressed="false">ScanSAR</button>
+    <button data-m="tops" aria-pressed="false">TOPS</button>
+    <button data-m="sweepsar" aria-pressed="false">SweepSAR (NISAR)</button>
+  </div>
+
+  <div class="stage"><canvas id="cv" width="1600" height="720"></canvas></div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--sat)"></span> satellite (flies along-track)</span>
+    <span><span class="sw" style="background:var(--beam)"></span> beam</span>
+    <span><span class="sw" style="background:var(--foot)"></span> footprint on the ground</span>
+    <span><span class="sw" style="background:var(--imaged)"></span> ground imaged so far</span>
+  </div>
+
+  <div class="controls">
+    <button id="play">Pause</button>
+    <button id="reset">Reset</button>
+    <div class="sp">speed <input type="range" id="speed" min="0.3" max="2.5" step="0.1" value="1"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="mname">Stripmap</h2>
+    <div class="what" id="mwhat"></div>
+    <div class="trade">
+      <div><div class="k">Beam</div><div class="v" id="tbeam"></div></div>
+      <div><div class="k">Azimuth resolution</div><div class="v" id="tres"></div></div>
+      <div><div class="k">Swath / coverage</div><div class="v" id="tcov"></div></div>
+    </div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('cv'), x=cv.getContext('2d'); const W=cv.width, H=cv.height;
+// ground map: along-track (azimuth) horizontal, range vertical (near top, far bottom)
+const L=90, R=W-90, T=150, B=H-70;         // ground rectangle
+const SATY=95;                              // satellite track height
+const AW=R-L, RH=B-T;
+let mode='stripmap', playing=true, speed=1, tt=0;
+let imaged;                                 // offscreen accumulation of imaged ground
+
+const INFO={
+ stripmap:{name:'Stripmap',
+   what:'The antenna points in one fixed direction and its footprint simply slides along the ground at the speed of the platform. Every target is lit for the same length of flight path, so the azimuth resolution is uniform and the image is one continuous strip.',
+   beam:'Fixed pointing', res:'Uniform, ρ_a = L_a/2 (moderate)', cov:'One sub-swath, continuous strip'},
+ spotlight:{name:'Spotlight',
+   what:'The beam is steered to keep staring at one small patch as the platform flies past. That patch is illuminated for far longer than a fixed beam would allow, which lengthens the synthetic aperture and sharpens the azimuth resolution — at the cost of imaging only that patch, not a continuous strip.',
+   beam:'Steered to dwell on one spot', res:'Finest (long synthetic aperture)', cov:'A single patch, no strip'},
+ scansar:{name:'ScanSAR',
+   what:'The beam is stepped between several sub-swaths at different ranges, dwelling on each for a short burst before hopping to the next. Cycling through them widens the total swath, but because each target is lit only for its brief burst, the azimuth resolution is coarser — and the bursts leave a periodic brightness modulation called scalloping.',
+   beam:'Stepped between range sub-swaths, in bursts', res:'Coarser (short bursts)', cov:'Wide swath (several sub-swaths)'},
+ tops:{name:'TOPS',
+   what:'Like ScanSAR, the beam hops between range sub-swaths in bursts — but within each burst it is also swept from back to front along-track. Sweeping the beam this way lets every target in the burst be seen through the whole antenna pattern, which gives a uniform azimuth resolution and removes the scalloping. TOPS is the Sentinel-1 interferometric-wide mode.',
+   beam:'Hops range sub-swaths and sweeps fore-to-aft within each burst', res:'Uniform (no scalloping)', cov:'Wide swath (several sub-swaths)'},
+ sweepsar:{name:'SweepSAR (NISAR)',
+   what:'A wide beam floods the whole swath on transmit; on receive, a narrow high-gain beam is swept in range to follow the echo as it returns from near to far. This "scan-on-receive" keeps full gain across a very wide swath continuously, with no bursts — the scheme NISAR uses to map a 240 km swath.',
+   beam:'Wide on transmit, narrow receive beam swept in range', res:'Uniform, continuous', cov:'Very wide swath, continuous'}
+};
+
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function resetImaged(){ imaged=document.createElement('canvas'); imaged.width=W; imaged.height=H; }
+resetImaged();
+
+function bands(n){ const h=RH/n, out=[]; for(let i=0;i<n;i++) out.push(T+h*(i+0.5)); return out; }
+
+function paintFoot(cx,cy,rw,rh,alpha){ // accumulate imaged ground
+  const g=imaged.getContext('2d'); g.globalAlpha=alpha; g.fillStyle=css('--imaged');
+  g.beginPath(); g.ellipse(cx,cy,rw,rh,0,0,7); g.fill(); g.globalAlpha=1;
+}
+
+// --- per-mode geometry: returns {sx, foot:[{cx,cy,rw,rh}], transmitWide?} ---
+function geom(t){
+  const sx=L+((t)%1)*AW;                 // satellite along-track position (wraps)
+  if(mode==='stripmap'){
+    const cy=T+RH*0.5; paintFoot(sx,cy,60,34,0.05);
+    return {sx, foot:[{cx:sx,cy,rw:60,rh:34}]};
+  }
+  if(mode==='spotlight'){
+    const cx=L+AW*0.5, cy=T+RH*0.5;       // fixed target patch
+    paintFoot(cx,cy,42,26,0.03);
+    return {sx, foot:[{cx,cy,rw:42,rh:26}], stareOnly:true};
+  }
+  if(mode==='scansar'){
+    const bs=bands(3); const nb=6;         // bursts across the pass
+    const phase=(t*nb)%1; const k=Math.floor((t*nb))%3;
+    const cx=sx, cy=bs[k]; paintFoot(cx,cy,52,26,0.06);
+    return {sx, foot:[{cx,cy,rw:52,rh:26}]};
+  }
+  if(mode==='tops'){
+    const bs=bands(3); const nb=6; const phase=(t*nb)%1; const k=Math.floor((t*nb))%3;
+    const cy=bs[k];
+    // within a burst, footprint sweeps from behind the satellite to ahead of it
+    const cx=sx + (phase-0.5)*220;
+    paintFoot(cx,cy,50,26,0.06);
+    return {sx, foot:[{cx,cy,rw:50,rh:26}], sweepAz:true};
+  }
+  // sweepsar: wide transmit over whole swath + narrow receive beam swept in range
+  const cyR=T+ (0.5+0.5*Math.sin(t*2*Math.PI*8))*RH;   // fast range sweep of receive beam
+  paintFoot(sx,cyR,46,18,0.05);
+  // also lightly fill the whole column as "covered" by the wide transmit
+  const g=imaged.getContext('2d'); g.globalAlpha=0.012; g.fillStyle=css('--imaged'); g.fillRect(sx-30,T,60,RH); g.globalAlpha=1;
+  return {sx, foot:[{cx:sx,cy:cyR,rw:46,rh:18}], transmitWide:true};
+}
+
+function draw(){
+  x.clearRect(0,0,W,H);
+  const ink=css('--ink'),muted=css('--muted'),rule=css('--rule'),beam=css('--beam'),foot=css('--foot'),sat=css('--sat'),track=css('--track');
+  // ground panel
+  x.fillStyle='#11151b'; x.fillRect(L,T,AW,RH);
+  // sub-swath band guides for multi-swath modes
+  if(mode==='scansar'||mode==='tops'){ const bs=bands(3);
+    x.strokeStyle='rgba(255,255,255,.10)'; x.lineWidth=1;
+    for(let i=1;i<3;i++){ const y=T+RH*i/3; x.beginPath(); x.moveTo(L,y); x.lineTo(R,y); x.stroke(); }
+    x.fillStyle='rgba(255,255,255,.35)'; x.font='500 18px "JetBrains Mono",monospace'; x.textAlign='left';
+    bs.forEach((y,i)=>x.fillText('sub-swath '+(i+1), L+8, y-RH/6+22));
+  }
+  // imaged accumulation
+  x.drawImage(imaged,0,0);
+  // axes labels
+  x.fillStyle=muted; x.font='500 19px "JetBrains Mono",monospace'; x.textAlign='center';
+  x.fillText('along-track  (azimuth, flight direction) →', (L+R)/2, H-34);
+  x.save(); x.translate(38,(T+B)/2); x.rotate(-Math.PI/2); x.fillText('range  (near → far)',0,0); x.restore();
+
+  const s=geom(tt);
+  // satellite track line
+  x.strokeStyle=rule; x.setLineDash([6,7]); x.lineWidth=1.5; x.beginPath(); x.moveTo(L,SATY); x.lineTo(R,SATY); x.stroke(); x.setLineDash([]);
+  // beam(s) + footprint(s)
+  const wide = s.transmitWide;
+  s.foot.forEach(f=>{
+    // transmit beam (wide) for sweepsar: fill a faint wedge to the whole swath
+    if(wide){
+      x.fillStyle='rgba(201,154,46,.10)'; x.beginPath();
+      x.moveTo(s.sx,SATY); x.lineTo(s.sx-70,B); x.lineTo(s.sx+70,B); x.closePath(); x.fill();
+    }
+    // beam wedge from satellite to footprint
+    const grd=x.createLinearGradient(s.sx,SATY,f.cx,f.cy);
+    grd.addColorStop(0, wide? 'rgba(201,154,46,.9)':'rgba(201,154,46,.28)');
+    grd.addColorStop(1,'rgba(201,154,46,.05)');
+    x.fillStyle=grd; x.beginPath();
+    x.moveTo(s.sx,SATY); x.lineTo(f.cx-f.rw,f.cy); x.lineTo(f.cx+f.rw,f.cy); x.closePath(); x.fill();
+    x.strokeStyle=beam; x.lineWidth=1.6; x.globalAlpha=.5;
+    x.beginPath(); x.moveTo(s.sx,SATY); x.lineTo(f.cx-f.rw,f.cy); x.moveTo(s.sx,SATY); x.lineTo(f.cx+f.rw,f.cy); x.stroke(); x.globalAlpha=1;
+    // footprint ellipse
+    x.fillStyle=foot; x.globalAlpha=.85; x.beginPath(); x.ellipse(f.cx,f.cy,f.rw,f.rh,0,0,7); x.fill(); x.globalAlpha=1;
+    x.strokeStyle=foot; x.lineWidth=2; x.beginPath(); x.ellipse(f.cx,f.cy,f.rw,f.rh,0,0,7); x.stroke();
+  });
+  // spotlight: draw a marker on the fixed target
+  if(s.stareOnly){ x.strokeStyle=track; x.lineWidth=2; x.setLineDash([4,4]);
+    x.beginPath(); x.ellipse(s.foot[0].cx,s.foot[0].cy,54,34,0,0,7); x.stroke(); x.setLineDash([]);
+    x.fillStyle=track; x.font='600 18px Archivo,sans-serif'; x.textAlign='center'; x.fillText('target patch', s.foot[0].cx, s.foot[0].cy+60); }
+  // satellite
+  x.fillStyle=sat; x.beginPath(); x.arc(s.sx,SATY,9,0,7); x.fill();
+  x.fillStyle=track; x.fillRect(s.sx-17,SATY-5,11,10); x.fillRect(s.sx+6,SATY-5,11,10);
+  // mode label
+  x.fillStyle=ink; x.font='600 22px Archivo,sans-serif'; x.textAlign='left';
+  x.fillText(INFO[mode].name, L, T-16);
+}
+
+function tick(){
+  if(playing){ tt=(tt+0.0016*speed); }
+  draw(); requestAnimationFrame(tick);
+}
+
+function setMode(m){
+  mode=m; tt=0; resetImaged();
+  document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.m===m));
+  const I=INFO[m];
+  $('mname').textContent=I.name; $('mwhat').textContent=I.what;
+  $('tbeam').textContent=I.beam; $('tres').textContent=I.res; $('tcov').textContent=I.cov;
+}
+document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m)));
+$('play').addEventListener('click',()=>{ playing=!playing; $('play').textContent=playing?'Pause':'Play'; });
+$('reset').addEventListener('click',()=>{ tt=0; resetImaged(); });
+$('speed').addEventListener('input',e=>speed=+e.target.value);
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+$('theme').addEventListener('click',()=>{ const cur=document.documentElement.getAttribute('data-theme');
+  const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nt=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){} });
+$('foot').textContent='RiSE Lab · CIVE 6359 · schematic — geometry is illustrative, not to scale';
+setMode('stripmap'); tick();
+</script>
+</body>
+</html>
