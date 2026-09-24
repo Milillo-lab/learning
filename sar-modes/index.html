@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SAR Acquisition Modes</title>
-<meta name="description" content="An animated explainer of the SAR acquisition modes — stripmap, spotlight, ScanSAR, TOPS and SweepSAR — showing how the beam moves over the ground and the resolution-versus-coverage trade each one makes.">
+<title>SAR Acquisition Modes &mdash; RiSE Lab</title>
+<meta name="description" content="An interactive 3D explainer of SAR acquisition modes — stripmap, spotlight, ScanSAR, TOPS and SweepSAR/NISAR — for CIVE 6359.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -13,255 +13,328 @@
   --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
   --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
   --rule:#CFD7E0; --rule-soft:#E2E8EF;
-  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0;
-  --beam:#C99A2E; --foot:#B93C18; --imaged:#0D6379; --sat:#131A22;
-  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:9px;
+  --track:#0D6379; --los:#A9500F; --foot:#B93C18; --beam:#C99A2E; --swath:#7FA9B8;
+  --scene:#EAF0F4; --tl-bg:#EDF1F4;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
   --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
   --rule:#28323E; --rule-soft:#1F2833;
-  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
-  --beam:#E7C15A; --foot:#F07A4B; --imaged:#4BC6DD; --sat:#E4EAF1;
+  --track:#4BC6DD; --los:#F0A143; --foot:#F0693F; --beam:#E7C25C; --swath:#6E93A3;
+  --scene:#10202A; --tl-bg:#1B242F;
   --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
 }}
 :root[data-theme="dark"]{
   --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
   --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
   --rule:#28323E; --rule-soft:#1F2833;
-  --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
-  --beam:#E7C15A; --foot:#F07A4B; --imaged:#4BC6DD; --sat:#E4EAF1;
+  --track:#4BC6DD; --los:#F0A143; --foot:#F0693F; --beam:#E7C25C; --swath:#6E93A3;
+  --scene:#10202A; --tl-bg:#1B242F;
   --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
 }
 *{box-sizing:border-box}
-body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased}
-.wrap{max-width:1120px; margin:0 auto; padding:22px 20px 64px}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:960px; margin:0 auto; padding:26px 20px 70px}
 a{color:var(--track)}
-.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
-.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
-.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
-h1{font-size:26px; margin:6px 0 0; letter-spacing:-.01em}
-.sub{font-family:Newsreader,Georgia,serif; font-size:16px; color:var(--muted); margin:6px 0 0; max-width:72ch}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px}
+.brand{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.brand a{color:var(--muted); text-decoration:none}
 .themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
-.modes{display:flex; gap:6px; flex-wrap:wrap; margin:18px 0 12px}
-.modes button{font-family:"JetBrains Mono",monospace; font-size:12px; padding:9px 14px; border:1px solid var(--rule); background:var(--panel-2); color:var(--muted); border-radius:8px; cursor:pointer}
-.modes button[aria-pressed="true"]{background:var(--track); color:#fff; border-color:var(--track)}
-.stage{background:#0e1116; border:1px solid var(--rule); border-radius:var(--r); overflow:hidden}
-canvas{display:block; width:100%; height:auto}
-.controls{display:flex; align-items:center; gap:14px; margin:12px 0; flex-wrap:wrap}
-.controls button{font-family:"JetBrains Mono",monospace; font-size:12px; padding:8px 16px; border:1px solid var(--rule); background:var(--panel); color:var(--ink); border-radius:8px; cursor:pointer}
-.controls button:hover{border-color:var(--faint)}
-.controls .sp{display:flex; align-items:center; gap:8px; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted)}
-input[type=range]{accent-color:var(--track)}
-.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:18px 20px; margin-top:6px}
-.card h2{font-size:20px; margin:0 0 4px}
-.card .what{font-family:Newsreader,Georgia,serif; font-size:16.5px; line-height:1.55; color:var(--ink); margin:8px 0}
-.trade{display:flex; gap:20px; flex-wrap:wrap; margin-top:12px}
-.trade div{flex:1; min-width:180px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 12px}
-.trade .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
-.trade .v{font-size:14.5px; margin-top:3px}
-.legend{display:flex; gap:16px; flex-wrap:wrap; margin:10px 2px 0; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted)}
+h1{font-size:32px; margin:12px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:18px; color:var(--muted); margin:10px 0 0; max-width:66ch}
+.modes{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 14px}
+.mbtn{font-family:"JetBrains Mono",monospace; font-size:11.5px; letter-spacing:.04em; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:8px; padding:8px 13px; cursor:pointer; transition:all .12s}
+.mbtn:hover{border-color:var(--track)}
+.mbtn.on{background:var(--track); color:#fff; border-color:var(--track)}
+.stage{position:relative; background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); overflow:hidden}
+#cv{display:block; width:100%; height:430px; touch-action:none; cursor:grab}
+#cv:active{cursor:grabbing}
+.hint{position:absolute; top:10px; right:12px; font-family:"JetBrains Mono",monospace; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:6px; padding:4px 8px; opacity:.9}
+.callout{position:absolute; left:14px; top:12px; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.03em; color:var(--los); background:var(--panel); border:1px solid var(--rule-soft); border-radius:6px; padding:5px 9px; max-width:70%}
+.tlwrap{border-top:1px solid var(--rule-soft); padding:10px 14px 12px; background:var(--panel)}
+.tlwrap .lab{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+.tlwrap .lab b{color:var(--ink); font-weight:600; text-transform:none; letter-spacing:0}
+#tl{display:block; width:100%; height:72px}
+.ctrls{display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:14px 0 0; padding:12px 14px; background:var(--panel); border:1px solid var(--rule); border-radius:var(--r)}
+.ctrls button.play{font-family:"JetBrains Mono",monospace; font-size:12px; background:var(--track); color:#fff; border:none; border-radius:8px; padding:8px 16px; cursor:pointer; min-width:88px}
+.ctrls .grp{display:flex; align-items:center; gap:8px; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.ctrls input[type=range]{accent-color:var(--track)}
+.ctrls button.ghost{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; background:var(--panel-2); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:7px 11px; cursor:pointer}
+.legend{display:flex; flex-wrap:wrap; gap:16px; margin:12px 2px 0; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; color:var(--muted)}
 .legend span{display:inline-flex; align-items:center; gap:6px}
-.sw{width:12px; height:12px; border-radius:3px; display:inline-block}
-footer{margin-top:26px; font-size:12px; color:var(--faint); font-family:"JetBrains Mono",monospace}
+.legend i{width:13px; height:13px; border-radius:3px; display:inline-block}
+.info{margin-top:22px; background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:20px 22px}
+.info h3{margin:0 0 4px; font-size:20px}
+.info .tag{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--los)}
+.info p{font-family:Newsreader,Georgia,serif; font-size:16.5px; color:var(--ink); margin:12px 0 0; max-width:70ch}
+.info .tradeoff{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule-soft); font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--muted); line-height:1.7}
+.info .tradeoff b{color:var(--ink); font-weight:700}
+.note{margin-top:16px; padding:14px 18px; border-left:3px solid var(--los); background:var(--panel-2); border-radius:0 var(--r) var(--r) 0; font-family:Newsreader,Georgia,serif; font-size:15.5px; color:var(--ink); max-width:74ch}
+.foot{margin-top:34px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+@media (max-width:560px){ #cv{height:340px} h1{font-size:26px} .callout{max-width:60%} }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div>
-      <div class="crumb"><a href="../index.html">Learning</a> / SAR Acquisition Modes</div>
-      <h1>SAR Acquisition Modes</h1>
-      <p class="sub">A radar builds an image while it flies. What it points its beam at as it goes — held fixed, steered onto one spot, hopped between swaths, or swept on receive — is the difference between the acquisition modes, and it sets the trade between resolution and coverage. Pick a mode and watch the beam.</p>
-    </div>
+    <span class="brand"><a href="../index.html">&larr; RiSE Lab &middot; Learning</a></span>
     <button class="themebtn" id="theme">Theme</button>
   </div>
+  <h1>SAR Acquisition Modes</h1>
+  <p class="lede">Five ways a radar trades resolution against coverage, shown in 3D &mdash; drag to orbit, scroll to zoom. The beam projects down to the ground and the imaged footprints accumulate as the platform flies along-track. The strip underneath shows <em>when</em> each part of the swath is being illuminated: that timing, not the ground picture, is where burst modes pay their price.</p>
 
-  <div class="modes" id="modes">
-    <button data-m="stripmap" aria-pressed="true">Stripmap</button>
-    <button data-m="spotlight" aria-pressed="false">Spotlight</button>
-    <button data-m="scansar" aria-pressed="false">ScanSAR</button>
-    <button data-m="tops" aria-pressed="false">TOPS</button>
-    <button data-m="sweepsar" aria-pressed="false">SweepSAR (NISAR)</button>
-  </div>
+  <div class="modes" id="modes"></div>
 
-  <div class="stage"><canvas id="cv" width="1600" height="720"></canvas></div>
-  <div class="legend">
-    <span><span class="sw" style="background:var(--sat)"></span> satellite (flies along-track)</span>
-    <span><span class="sw" style="background:var(--beam)"></span> beam</span>
-    <span><span class="sw" style="background:var(--foot)"></span> footprint on the ground</span>
-    <span><span class="sw" style="background:var(--imaged)"></span> ground imaged so far</span>
-  </div>
-
-  <div class="controls">
-    <button id="play">Pause</button>
-    <button id="reset">Reset</button>
-    <div class="sp">speed <input type="range" id="speed" min="0.3" max="2.5" step="0.1" value="1"></div>
-  </div>
-
-  <div class="card">
-    <h2 id="mname">Stripmap</h2>
-    <div class="what" id="mwhat"></div>
-    <div class="trade">
-      <div><div class="k">Beam</div><div class="v" id="tbeam"></div></div>
-      <div><div class="k">Azimuth resolution</div><div class="v" id="tres"></div></div>
-      <div><div class="k">Swath / coverage</div><div class="v" id="tcov"></div></div>
+  <div class="stage">
+    <canvas id="cv"></canvas>
+    <div class="callout" id="callout"></div>
+    <div class="callout steer" id="steer" style="top:44px;color:var(--beam);display:none"></div>
+    <div class="hint">drag &middot; scroll &middot; right-drag pans</div>
+    <div class="tlwrap">
+      <div class="lab">Beam duty cycle (time &rarr;) &nbsp;<b id="tl-note"></b></div>
+      <canvas id="tl"></canvas>
     </div>
   </div>
 
-  <footer id="foot"></footer>
+  <div class="ctrls">
+    <button class="play" id="play">Pause</button>
+    <div class="grp">Speed
+      <input type="range" id="speed" min="0.25" max="2.5" step="0.05" value="1">
+      <span id="spdval" style="min-width:34px">1.0&times;</span>
+    </div>
+    <button class="ghost" id="reset">Reset view</button>
+    <div class="grp" style="margin-left:auto">Progress
+      <input type="range" id="scrub" min="0" max="1000" step="1" value="0" style="width:150px">
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--track)"></i>platform / ground track</span>
+    <span><i style="background:var(--los)"></i>active beam</span>
+    <span><i style="background:var(--foot)"></i>imaged footprint (darker = overlap)</span>
+    <span><i style="background:var(--beam)"></i>receive sub-beam / squint</span>
+    <span><i style="background:var(--swath)"></i>sub-swath edge</span>
+  </div>
+
+  <div class="info">
+    <div class="tag" id="i-tag">MODE</div>
+    <h3 id="i-title">Stripmap</h3>
+    <p id="i-desc"></p>
+    <div class="tradeoff" id="i-trade"></div>
+  </div>
+
+  <div class="note"><b>No holes in the data.</b> In ScanSAR and TOPS the antenna's along-track footprint is much longer than the distance the platform moves during one full sub-swath cycle, so consecutive bursts on the same sub-swath overlap on the ground and coverage is contiguous. What each target loses is <em>time</em>: it is illuminated for only a fraction of its footprint crossing, which shortens the synthetic aperture and coarsens azimuth resolution. SweepSAR pulses at kHz rates under a kilometers-long footprint, so its coverage is continuous by a wide margin.</div>
+
+  <p class="foot">Built for CIVE 6359 &mdash; SAR Remote Sensing. Companion animation clips are in the course slides.</p>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const $=id=>document.getElementById(id);
-const cv=$('cv'), x=cv.getContext('2d'); const W=cv.width, H=cv.height;
-// ground map: along-track (azimuth) horizontal, range vertical (near top, far bottom)
-const L=90, R=W-90, T=150, B=H-70;         // ground rectangle
-const SATY=95;                              // satellite track height
-const AW=R-L, RH=B-T;
-let mode='stripmap', playing=true, speed=1, tt=0;
-let imaged;                                 // offscreen accumulation of imaged ground
-
-const INFO={
- stripmap:{name:'Stripmap',
-   what:'The antenna points in one fixed direction and its footprint simply slides along the ground at the speed of the platform. Every target is lit for the same length of flight path, so the azimuth resolution is uniform and the image is one continuous strip.',
-   beam:'Fixed pointing', res:'Uniform, ρ_a = L_a/2 (moderate)', cov:'One sub-swath, continuous strip'},
- spotlight:{name:'Spotlight',
-   what:'The beam is steered to keep staring at one small patch as the platform flies past. That patch is illuminated for far longer than a fixed beam would allow, which lengthens the synthetic aperture and sharpens the azimuth resolution — at the cost of imaging only that patch, not a continuous strip.',
-   beam:'Steered to dwell on one spot', res:'Finest (long synthetic aperture)', cov:'A single patch, no strip'},
- scansar:{name:'ScanSAR',
-   what:'The beam is stepped between several sub-swaths at different ranges, dwelling on each for a short burst before hopping to the next. Cycling through them widens the total swath, but because each target is lit only for its brief burst, the azimuth resolution is coarser — and the bursts leave a periodic brightness modulation called scalloping.',
-   beam:'Stepped between range sub-swaths, in bursts', res:'Coarser (short bursts)', cov:'Wide swath (several sub-swaths)'},
- tops:{name:'TOPS',
-   what:'Like ScanSAR, the beam hops between range sub-swaths in bursts — but within each burst it is also swept from back to front along-track. Sweeping the beam this way lets every target in the burst be seen through the whole antenna pattern, which gives a uniform azimuth resolution and removes the scalloping. TOPS is the Sentinel-1 interferometric-wide mode.',
-   beam:'Hops range sub-swaths and sweeps fore-to-aft within each burst', res:'Uniform (no scalloping)', cov:'Wide swath (several sub-swaths)'},
- sweepsar:{name:'SweepSAR (NISAR)',
-   what:'A wide beam floods the whole swath on transmit; on receive, a narrow high-gain beam is swept in range to follow the echo as it returns from near to far. This "scan-on-receive" keeps full gain across a very wide swath continuously, with no bursts — the scheme NISAR uses to map a 240 km swath.',
-   beam:'Wide on transmit, narrow receive beam swept in range', res:'Uniform, continuous', cov:'Very wide swath, continuous'}
-};
-
-function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
-function resetImaged(){ imaged=document.createElement('canvas'); imaged.width=W; imaged.height=H; }
-resetImaged();
-
-function bands(n){ const h=RH/n, out=[]; for(let i=0;i<n;i++) out.push(T+h*(i+0.5)); return out; }
-
-function paintFoot(cx,cy,rw,rh,alpha){ // accumulate imaged ground
-  const g=imaged.getContext('2d'); g.globalAlpha=alpha; g.fillStyle=css('--imaged');
-  g.beginPath(); g.ellipse(cx,cy,rw,rh,0,0,7); g.fill(); g.globalAlpha=1;
-}
-
-// --- per-mode geometry: returns {sx, foot:[{cx,cy,rw,rh}], transmitWide?} ---
-function geom(t){
-  const sx=L+((t)%1)*AW;                 // satellite along-track position (wraps)
-  if(mode==='stripmap'){
-    const cy=T+RH*0.5; paintFoot(sx,cy,60,34,0.05);
-    return {sx, foot:[{cx:sx,cy,rw:60,rh:34}]};
-  }
-  if(mode==='spotlight'){
-    const cx=L+AW*0.5, cy=T+RH*0.5;       // fixed target patch
-    paintFoot(cx,cy,42,26,0.03);
-    return {sx, foot:[{cx,cy,rw:42,rh:26}], stareOnly:true};
-  }
-  if(mode==='scansar'){
-    const bs=bands(3); const nb=6;         // bursts across the pass
-    const phase=(t*nb)%1; const k=Math.floor((t*nb))%3;
-    const cx=sx, cy=bs[k]; paintFoot(cx,cy,52,26,0.06);
-    return {sx, foot:[{cx,cy,rw:52,rh:26}]};
-  }
-  if(mode==='tops'){
-    const bs=bands(3); const nb=6; const phase=(t*nb)%1; const k=Math.floor((t*nb))%3;
-    const cy=bs[k];
-    // within a burst, footprint sweeps from behind the satellite to ahead of it
-    const cx=sx + (phase-0.5)*220;
-    paintFoot(cx,cy,50,26,0.06);
-    return {sx, foot:[{cx,cy,rw:50,rh:26}], sweepAz:true};
-  }
-  // sweepsar: wide transmit over whole swath + narrow receive beam swept in range
-  const cyR=T+ (0.5+0.5*Math.sin(t*2*Math.PI*8))*RH;   // fast range sweep of receive beam
-  paintFoot(sx,cyR,46,18,0.05);
-  // also lightly fill the whole column as "covered" by the wide transmit
-  const g=imaged.getContext('2d'); g.globalAlpha=0.012; g.fillStyle=css('--imaged'); g.fillRect(sx-30,T,60,RH); g.globalAlpha=1;
-  return {sx, foot:[{cx:sx,cy:cyR,rw:46,rh:18}], transmitWide:true};
-}
-
-function draw(){
-  x.clearRect(0,0,W,H);
-  const ink=css('--ink'),muted=css('--muted'),rule=css('--rule'),beam=css('--beam'),foot=css('--foot'),sat=css('--sat'),track=css('--track');
-  // ground panel
-  x.fillStyle='#11151b'; x.fillRect(L,T,AW,RH);
-  // sub-swath band guides for multi-swath modes
-  if(mode==='scansar'||mode==='tops'){ const bs=bands(3);
-    x.strokeStyle='rgba(255,255,255,.10)'; x.lineWidth=1;
-    for(let i=1;i<3;i++){ const y=T+RH*i/3; x.beginPath(); x.moveTo(L,y); x.lineTo(R,y); x.stroke(); }
-    x.fillStyle='rgba(255,255,255,.35)'; x.font='500 18px "JetBrains Mono",monospace'; x.textAlign='left';
-    bs.forEach((y,i)=>x.fillText('sub-swath '+(i+1), L+8, y-RH/6+22));
-  }
-  // imaged accumulation
-  x.drawImage(imaged,0,0);
-  // axes labels
-  x.fillStyle=muted; x.font='500 19px "JetBrains Mono",monospace'; x.textAlign='center';
-  x.fillText('along-track  (azimuth, flight direction) →', (L+R)/2, H-34);
-  x.save(); x.translate(38,(T+B)/2); x.rotate(-Math.PI/2); x.fillText('range  (near → far)',0,0); x.restore();
-
-  const s=geom(tt);
-  // satellite track line
-  x.strokeStyle=rule; x.setLineDash([6,7]); x.lineWidth=1.5; x.beginPath(); x.moveTo(L,SATY); x.lineTo(R,SATY); x.stroke(); x.setLineDash([]);
-  // beam(s) + footprint(s)
-  const wide = s.transmitWide;
-  s.foot.forEach(f=>{
-    // transmit beam (wide) for sweepsar: fill a faint wedge to the whole swath
-    if(wide){
-      x.fillStyle='rgba(201,154,46,.10)'; x.beginPath();
-      x.moveTo(s.sx,SATY); x.lineTo(s.sx-70,B); x.lineTo(s.sx+70,B); x.closePath(); x.fill();
-    }
-    // beam wedge from satellite to footprint
-    const grd=x.createLinearGradient(s.sx,SATY,f.cx,f.cy);
-    grd.addColorStop(0, wide? 'rgba(201,154,46,.9)':'rgba(201,154,46,.28)');
-    grd.addColorStop(1,'rgba(201,154,46,.05)');
-    x.fillStyle=grd; x.beginPath();
-    x.moveTo(s.sx,SATY); x.lineTo(f.cx-f.rw,f.cy); x.lineTo(f.cx+f.rw,f.cy); x.closePath(); x.fill();
-    x.strokeStyle=beam; x.lineWidth=1.6; x.globalAlpha=.5;
-    x.beginPath(); x.moveTo(s.sx,SATY); x.lineTo(f.cx-f.rw,f.cy); x.moveTo(s.sx,SATY); x.lineTo(f.cx+f.rw,f.cy); x.stroke(); x.globalAlpha=1;
-    // footprint ellipse
-    x.fillStyle=foot; x.globalAlpha=.85; x.beginPath(); x.ellipse(f.cx,f.cy,f.rw,f.rh,0,0,7); x.fill(); x.globalAlpha=1;
-    x.strokeStyle=foot; x.lineWidth=2; x.beginPath(); x.ellipse(f.cx,f.cy,f.rw,f.rh,0,0,7); x.stroke();
-  });
-  // spotlight: draw a marker on the fixed target
-  if(s.stareOnly){ x.strokeStyle=track; x.lineWidth=2; x.setLineDash([4,4]);
-    x.beginPath(); x.ellipse(s.foot[0].cx,s.foot[0].cy,54,34,0,0,7); x.stroke(); x.setLineDash([]);
-    x.fillStyle=track; x.font='600 18px Archivo,sans-serif'; x.textAlign='center'; x.fillText('target patch', s.foot[0].cx, s.foot[0].cy+60); }
-  // satellite
-  x.fillStyle=sat; x.beginPath(); x.arc(s.sx,SATY,9,0,7); x.fill();
-  x.fillStyle=track; x.fillRect(s.sx-17,SATY-5,11,10); x.fillRect(s.sx+6,SATY-5,11,10);
-  // mode label
-  x.fillStyle=ink; x.font='600 22px Archivo,sans-serif'; x.textAlign='left';
-  x.fillText(INFO[mode].name, L, T-16);
-}
-
-function tick(){
-  if(playing){ tt=(tt+0.0016*speed); }
-  draw(); requestAnimationFrame(tick);
-}
-
-function setMode(m){
-  mode=m; tt=0; resetImaged();
-  document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.m===m));
-  const I=INFO[m];
-  $('mname').textContent=I.name; $('mwhat').textContent=I.what;
-  $('tbeam').textContent=I.beam; $('tres').textContent=I.res; $('tcov').textContent=I.cov;
-}
-document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m)));
-$('play').addEventListener('click',()=>{ playing=!playing; $('play').textContent=playing?'Pause':'Play'; });
-$('reset').addEventListener('click',()=>{ tt=0; resetImaged(); });
-$('speed').addEventListener('input',e=>speed=+e.target.value);
 (function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
-$('theme').addEventListener('click',()=>{ const cur=document.documentElement.getAttribute('data-theme');
+document.getElementById('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
   const dark= cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   const nt=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',nt);
-  try{localStorage.setItem('sargeom-theme',nt);}catch(e){} });
-$('foot').textContent='RiSE Lab · CIVE 6359 · schematic — geometry is illustrative, not to scale';
-setMode('stripmap'); tick();
+  try{localStorage.setItem('sargeom-theme',nt);}catch(e){}
+  buildStatic();
+});
+function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* ---------- world (X along-track, Z range, Y up) ---------- */
+const X_MAX=100, ALT=34, R_NEAR=8, R_FAR=46, R_CEN=0.5*(R_NEAR+R_FAR);
+const SUB=[[R_NEAR,R_NEAR+11.5],[R_NEAR+12.5,R_NEAR+24.0],[R_NEAR+25.0,R_FAR]];
+const SUBN=["near","mid","far"];
+
+const MODES={
+ stripmap:{name:"Stripmap", tag:"Fixed beam · continuous", call:"fixed beam · one swath · beam always on",
+   tlnote:"always on — continuous coverage",
+   desc:"The antenna points broadside and never moves. As the platform flies, the footprint sweeps out one long continuous strip on the ground — no gaps, one range swath.",
+   trade:"<b>Resolution:</b> moderate azimuth (set by the real antenna length). &nbsp; <b>Coverage:</b> one swath width, unlimited length. &nbsp; <b>Duty cycle:</b> 100% on one swath."},
+ spotlight:{name:"Spotlight", tag:"Steered dwell · finest azimuth", call:"beam steers to dwell on one patch · longest aperture",
+   tlnote:"the one patch is illuminated for the whole pass",
+   desc:"The beam is steered to keep staring at a single patch as the platform passes. That long dwell builds a long synthetic aperture, giving the finest azimuth resolution — at the cost of a small scene that is not contiguous along-track.",
+   trade:"<b>Resolution:</b> finest azimuth (longest synthetic aperture). &nbsp; <b>Coverage:</b> a single small patch. &nbsp; <b>Duty cycle:</b> 100% on one patch."},
+ scansar:{name:"ScanSAR", tag:"Burst hopping · wide swath", call:"hops range sub-swaths in bursts · bursts overlap → no coverage gap",
+   tlnote:"each band lit ⅓ of the time — the gap is in time, not on the ground",
+   desc:"The beam hops between several range sub-swaths in bursts. Sharing time across bands images a much wider swath. Because the footprint is longer than the platform advances per cycle, bursts on each band overlap and the ground is fully covered — but every target is illuminated for only part of its footprint crossing, so azimuth resolution is coarser, and the uneven weighting across a burst causes scalloping.",
+   trade:"<b>Resolution:</b> coarser azimuth (short bursts). &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; scalloping."},
+ tops:{name:"TOPS", tag:"Burst hopping + fore→aft sweep", call:"antenna steers fore→aft during each burst · bursts overlap → no gap",
+   tlnote:"each band lit ⅓ of the time — uniform weighting, no scalloping",
+   desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from fore to aft (watch the beam pivot between the dashed fore and aft ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
+   trade:"<b>Resolution:</b> coarser azimuth, but <b>uniform</b>. &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; no scalloping."},
+ sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"wide transmit · narrow receive beam swept in range · pulses overlap → continuous",
+   tlnote:"every pulse lights the whole swath — no burst gaps, no coverage gaps",
+   desc:"A short antenna floods a very wide swath on transmit. On receive, a digitally formed narrow beam is swept in range to follow the returning echo down the swath (scan-on-receive). Pulses repeat at kilohertz rates under a kilometers-long footprint, so coverage is continuous and there is no burst penalty. This is how NISAR images its 240 km swath at full resolution.",
+   trade:"<b>Resolution:</b> full azimuth (continuous pulses). &nbsp; <b>Coverage:</b> very wide swath (240 km on NISAR). &nbsp; <b>Duty cycle:</b> 100% on the whole swath."},
+};
+const ORDER=["stripmap","spotlight","scansar","tops","sweepsar"];
+
+/* ---------- three ---------- */
+const canvas=document.getElementById('cv');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(40,2,0.1,2000);
+const CENTER=new THREE.Vector3(X_MAX*0.5,4,R_CEN);
+let orb={r:140,theta:2.05,phi:1.0,target:CENTER.clone()};
+const ORB0={r:orb.r,theta:orb.theta,phi:orb.phi,t:CENTER.clone()};
+function placeCamera(){
+  const st=Math.sin(orb.phi),ct=Math.cos(orb.phi);
+  camera.position.set(orb.target.x+orb.r*st*Math.cos(orb.theta), orb.target.y+orb.r*ct, orb.target.z+orb.r*st*Math.sin(orb.theta));
+  camera.lookAt(orb.target);
+}
+(function(){
+  let m=null,lx=0,ly=0;
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId); m=(e.button===2)?'pan':'rot'; lx=e.clientX; ly=e.clientY; e.preventDefault();});
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('pointermove',e=>{
+    if(!m)return; const dx=e.clientX-lx,dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+    if(m==='rot'){ orb.theta-=dx*0.006; orb.phi=Math.max(0.15,Math.min(1.5,orb.phi-dy*0.006)); }
+    else{
+      const f=new THREE.Vector3().subVectors(orb.target,camera.position); f.y=0; f.normalize();
+      const rt=new THREE.Vector3(-f.z,0,f.x);
+      orb.target.addScaledVector(rt,-dx*orb.r*0.0011); orb.target.y+=dy*orb.r*0.0009;
+    }
+    placeCamera();
+  });
+  canvas.addEventListener('pointerup',()=>m=null);
+  canvas.addEventListener('wheel',e=>{orb.r=Math.max(60,Math.min(320,orb.r*(1+Math.sign(e.deltaY)*0.09))); placeCamera(); e.preventDefault();},{passive:false});
+})();
+
+const staticGrp=new THREE.Group(); scene.add(staticGrp); let bandLines=[];
+function line(pts,color,op){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:op})); staticGrp.add(l); return l; }
+function buildStatic(){
+  while(staticGrp.children.length){const o=staticGrp.children.pop(); o.geometry&&o.geometry.dispose();}
+  bandLines=[];
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(X_MAX+16,R_FAR+22),
+    new THREE.MeshBasicMaterial({color:new THREE.Color(cssv('--scene')),side:THREE.DoubleSide}));
+  plane.rotation.x=-Math.PI/2; plane.position.set(X_MAX*0.5,-0.02,(R_FAR+22)*0.5-9); staticGrp.add(plane);
+  const pts=[]; for(let x=0;x<=X_MAX;x+=10)pts.push(x,0.01,0,x,0.01,R_FAR+6); for(let z=0;z<=R_FAR+6;z+=10)pts.push(0,0.01,z,X_MAX,0.01,z);
+  const gg=new THREE.BufferGeometry(); gg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  staticGrp.add(new THREE.LineSegments(gg,new THREE.LineBasicMaterial({color:new THREE.Color(cssv('--rule')),transparent:true,opacity:0.6})));
+  line([[0,0.03,0],[X_MAX,0.03,0]],cssv('--track'),0.55);
+  for(const b of SUB){ bandLines.push(line([[0,0.03,b[0]],[X_MAX,0.03,b[0]]],cssv('--swath'),0.45)); bandLines.push(line([[0,0.03,b[1]],[X_MAX,0.03,b[1]]],cssv('--swath'),0.45)); }
+}
+
+const dyn=new THREE.Group(); scene.add(dyn);
+function clearDyn(){ while(dyn.children.length){const o=dyn.children.pop(); o.geometry&&o.geometry.dispose(); o.material&&o.material.dispose();} }
+function mat(color,op){ return new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false}); }
+let yq=0.05;
+function quad(x0,x1,z0,z1,color,op,edge){
+  const y=yq; yq+=0.002; // tiny lift per quad so overlaps composite cleanly
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([x0,y,z0,x1,y,z0,x1,y,z1, x0,y,z0,x1,y,z1,x0,y,z1]),3));
+  dyn.add(new THREE.Mesh(g,mat(color,op)));
+  if(edge){ const eg=new THREE.BufferGeometry(); eg.setAttribute('position',new THREE.Float32BufferAttribute([x0,y+0.01,z0,x1,y+0.01,z0,x1,y+0.01,z1,x0,y+0.01,z1,x0,y+0.01,z0],3));
+    dyn.add(new THREE.Line(eg,new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:edge}))); }
+}
+function beamVol(sx,x0,x1,z0,z1,color,op){
+  const a=[sx,ALT,0], c=[[x0,0,z0],[x1,0,z0],[x1,0,z1],[x0,0,z1]], v=[];
+  for(let i=0;i<4;i++){v.push(...a,...c[i],...c[(i+1)%4]);}
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));
+  dyn.add(new THREE.Mesh(g,mat(color,op)));
+}
+function seg(a,b,color,op){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute([...a,...b],3));
+  dyn.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:op}))); }
+function sat(sx){ const s=new THREE.Mesh(new THREE.SphereGeometry(1.5,16,12),new THREE.MeshBasicMaterial({color:new THREE.Color(cssv('--track'))})); s.position.set(sx,ALT,0); dyn.add(s);
+  seg([sx,ALT,0],[sx,0,0],cssv('--track'),0.25); }
+
+/* ---------- mode physics (same as the GIFs) ---------- */
+const LF=6.0;
+function fStrip(p){ const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p;
+  quad(x0-LF/2,sx+LF/2,R_NEAR,R_FAR,cssv('--foot'),0.30);
+  beamVol(sx,sx-LF/2,sx+LF/2,R_NEAR,R_FAR,cssv('--los'),0.16);
+  quad(sx-LF/2,sx+LF/2,R_NEAR,R_FAR,cssv('--foot'),0.55,0.9); sat(sx);
+  return [{name:"swath",iv:[[0,1]]}]; }
+function fSpot(p){ const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p,px=0.5*(x0+x1),z0=R_CEN-6,z1=R_CEN+6;
+  quad(px-6,px+6,z0,z1,cssv('--foot'),0.18+0.42*p,0.9);
+  beamVol(sx,px-6,px+6,z0,z1,cssv('--los'),0.15);
+  seg([sx,ALT,0],[px,0,R_CEN],cssv('--beam'),0.9); sat(sx);
+  return [{name:"patch",iv:[[0,1]]}]; }
+function fBurst(p,tops){
+  const x0=4,x1=X_MAX-4,sx=x0+(x1-x0)*p,nb=3,cycle=tops?14:7,badv=cycle/nb,sweep=tops?4.6:0;
+  const phase=sx-x0,active=Math.floor(phase/badv)%nb,sg=(phase%badv)/badv;
+  for(let bi=0;bi<nb;bi++){ const [z0,z1]=SUB[bi]; let x=x0+bi*badv;
+    while(x<sx){ const xe=Math.min(sx,x+badv); quad(x-LF/2-sweep,xe+LF/2+sweep,z0,z1,cssv('--foot'),0.26,0.55); x+=cycle; } }
+  const [z0,z1]=SUB[active], zc=0.5*(z0+z1), sq=tops?(sg-0.5)*2*sweep:0;
+  if(tops){
+    const bstart=x0+Math.floor(phase/badv)*badv;
+    for(const gx of [bstart-sweep, bstart+badv+sweep]){
+      const eg=new THREE.BufferGeometry(); eg.setAttribute('position',new THREE.Float32BufferAttribute([gx-LF/2,0.12,z0,gx+LF/2,0.12,z0,gx+LF/2,0.12,z1,gx-LF/2,0.12,z1,gx-LF/2,0.12,z0],3));
+      const gl=new THREE.Line(eg,new THREE.LineDashedMaterial({color:new THREE.Color(cssv('--beam')),dashSize:1.2,gapSize:0.8,transparent:true,opacity:0.95})); gl.computeLineDistances(); dyn.add(gl);
+    }
+    for(const cx of [sx-LF/2+sq,sx+LF/2+sq]){ seg([sx,ALT,0],[cx,0,z0],cssv('--beam'),0.9); seg([sx,ALT,0],[cx,0,z1],cssv('--beam'),0.9); }
+    seg([sx,ALT,0],[sx+sq,0,zc],cssv('--beam'),1.0);
+    seg([sx,ALT,0],[sx,0,zc],cssv('--track'),0.35);
+    beamVol(sx,sx-LF/2+sq,sx+LF/2+sq,z0,z1,cssv('--beam'),0.26);
+    const k=Math.round(sg*10); steerTxt="antenna steering:  fore "+"\u25AE".repeat(k)+"\u25AF".repeat(10-k)+" aft";
+  }else{ beamVol(sx,sx-LF/2,sx+LF/2,z0,z1,cssv('--los'),0.18); steerTxt=""; }
+  quad(sx-LF/2+sq,sx+LF/2+sq,z0,z1,cssv('--foot'),0.55,0.9);
+  sat(sx);
+  const T=x1-x0, rows=[];
+  for(let bi=0;bi<nb;bi++){ const iv=[]; let x=bi*badv; while(x<T){ iv.push([x/T,Math.min(T,x+badv)/T]); x+=cycle; } rows.push({name:SUBN[bi],iv}); }
+  return rows;
+}
+function fSweep(p){ const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p,LFs=5.0,sp=1.8;
+  for(let x=x0;x<=sx;x+=sp) quad(x-LFs/2,x+LFs/2,R_NEAR,R_FAR,cssv('--foot'),0.09,0.3);
+  beamVol(sx,sx-LFs/2,sx+LFs/2,R_NEAR,R_FAR,cssv('--los'),0.10);
+  quad(sx-LFs/2,sx+LFs/2,R_NEAR,R_FAR,cssv('--foot'),0.30,0.9);
+  const sw=Math.sin(p*2*Math.PI*6)*0.5+0.5, ry=R_NEAR+(R_FAR-R_NEAR)*sw;
+  beamVol(sx,sx-LFs/2,sx+LFs/2,ry-3,ry+3,cssv('--beam'),0.30);
+  quad(sx-LFs/2,sx+LFs/2,ry-3,ry+3,cssv('--beam'),0.75); sat(sx);
+  const n=Math.floor((x1-x0)/sp), ticks=[]; for(let k=0;k<=n;k++) ticks.push(k*sp/(x1-x0));
+  return [{name:"swath",iv:[[0,1]],ticks}]; }
+const BUILD={stripmap:fStrip,spotlight:fSpot,scansar:p=>fBurst(p,false),tops:p=>fBurst(p,true),sweepsar:fSweep};
+
+/* ---------- timeline strip ---------- */
+const tl=document.getElementById('tl'), tctx=tl.getContext('2d');
+function drawTL(rows,t){
+  const W=tl.clientWidth,H=tl.clientHeight; if(tl.width!==W*devicePixelRatio){tl.width=W*devicePixelRatio; tl.height=H*devicePixelRatio;}
+  tctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); tctx.clearRect(0,0,W,H);
+  const L=44, R=W-8, n=rows.length, rh=H/n;
+  tctx.font='10px "JetBrains Mono",monospace'; tctx.textBaseline='middle';
+  rows.forEach((r,i)=>{
+    const y=i*rh+rh*0.2, h=rh*0.6;
+    tctx.fillStyle=cssv('--tl-bg'); tctx.fillRect(L,y,R-L,h);
+    r.iv.forEach(([a,b])=>{ tctx.globalAlpha=a<=t?0.8:0.28; tctx.fillStyle=cssv('--foot'); tctx.fillRect(L+a*(R-L),y,Math.max(1,(b-a)*(R-L)),h); });
+    tctx.globalAlpha=1;
+    if(r.ticks){ tctx.strokeStyle='rgba(255,255,255,.7)'; tctx.lineWidth=1; r.ticks.forEach(x=>{ const px=L+x*(R-L); tctx.beginPath(); tctx.moveTo(px,y); tctx.lineTo(px,y+h); tctx.stroke(); }); }
+    tctx.fillStyle=cssv('--muted'); tctx.textAlign='right'; tctx.fillText(r.name,L-6,y+h/2);
+  });
+  tctx.strokeStyle=cssv('--track'); tctx.lineWidth=1.5; tctx.beginPath(); tctx.moveTo(L+t*(R-L),2); tctx.lineTo(L+t*(R-L),H-2); tctx.stroke();
+}
+
+/* ---------- loop ---------- */
+let mode="stripmap",playing=true,p=0,speed=1,last=performance.now(),steerTxt="";
+const steerEl=document.getElementById('steer');
+function frame(now){
+  const dt=(now-last)/1000; last=now;
+  if(playing){ p+=dt*0.09*speed; if(p>1)p=0; scrub.value=Math.round(p*1000); }
+  clearDyn(); yq=0.05;
+  const rows=BUILD[mode](p);
+  bandLines.forEach(l=>l.visible=(mode==='scansar'||mode==='tops'));
+  renderer.render(scene,camera); drawTL(rows,p);
+  if(steerTxt){steerEl.style.display='block'; steerEl.textContent=steerTxt;} else steerEl.style.display='none';
+  requestAnimationFrame(frame);
+}
+function resize(){ const w=canvas.clientWidth,h=canvas.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+
+/* ---------- UI ---------- */
+const modesEl=document.getElementById('modes');
+ORDER.forEach(k=>{ const b=document.createElement('button'); b.className='mbtn'+(k===mode?' on':''); b.textContent=MODES[k].name; b.dataset.k=k;
+  b.onclick=()=>{ mode=k; p=0; document.querySelectorAll('.mbtn').forEach(x=>x.classList.toggle('on',x.dataset.k===k)); showInfo(); }; modesEl.appendChild(b); });
+function showInfo(){ const m=MODES[mode];
+  document.getElementById('i-tag').textContent=m.tag; document.getElementById('i-title').textContent=m.name;
+  document.getElementById('i-desc').textContent=m.desc; document.getElementById('i-trade').innerHTML=m.trade;
+  document.getElementById('callout').textContent=m.call; document.getElementById('tl-note').textContent=m.tlnote; }
+const playBtn=document.getElementById('play'); playBtn.onclick=()=>{ playing=!playing; playBtn.textContent=playing?'Pause':'Play'; last=performance.now(); };
+const scrub=document.getElementById('scrub'); scrub.oninput=()=>{ p=scrub.value/1000; playing=false; playBtn.textContent='Play'; };
+const spd=document.getElementById('speed'),spdval=document.getElementById('spdval'); spd.oninput=()=>{ speed=parseFloat(spd.value); spdval.textContent=speed.toFixed(1)+'×'; };
+document.getElementById('reset').onclick=()=>{ orb.r=ORB0.r; orb.theta=ORB0.theta; orb.phi=ORB0.phi; orb.target.copy(ORB0.t); placeCamera(); };
+window.addEventListener('resize',resize);
+buildStatic(); resize(); placeCamera(); showInfo(); requestAnimationFrame(frame);
 </script>
 </body>
 </html>
