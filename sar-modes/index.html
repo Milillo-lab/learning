@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SAR Acquisition Modes &mdash; RiSE Lab</title>
-<meta name="description" content="An interactive 3D explainer of SAR acquisition modes — stripmap, spotlight, ScanSAR, TOPS and SweepSAR/NISAR — for CIVE 6359.">
+<meta name="description" content="An interactive 3D explainer of SAR acquisition modes: stripmap, spotlight, ScanSAR, TOPS and SweepSAR/NISAR, for CIVE 6359.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -82,7 +82,7 @@ h1{font-size:32px; margin:12px 0 0; letter-spacing:-.02em}
     <button class="themebtn" id="theme">Theme</button>
   </div>
   <h1>SAR Acquisition Modes</h1>
-  <p class="lede">Five ways a radar trades resolution against coverage, shown in 3D &mdash; drag to orbit, scroll to zoom. The beam projects down to the ground and the imaged footprints accumulate as the platform flies along-track. The strip underneath shows <em>when</em> each part of the swath is being illuminated: that timing, not the ground picture, is where burst modes pay their price.</p>
+  <p class="lede">Five ways a radar trades resolution against coverage, shown in 3D. Drag to orbit, scroll to zoom. The beam projects down to the ground and the imaged footprints accumulate as the platform flies along-track. The strip underneath shows <em>when</em> each part of the swath is being illuminated: that timing, not the ground picture, is where burst modes pay their price.</p>
 
   <div class="modes" id="modes"></div>
 
@@ -124,7 +124,7 @@ h1{font-size:32px; margin:12px 0 0; letter-spacing:-.02em}
     <div class="tradeoff" id="i-trade"></div>
   </div>
 
-  <div class="note"><b>No holes in the data.</b> In ScanSAR and TOPS the antenna's along-track footprint is much longer than the distance the platform moves during one full sub-swath cycle, so consecutive bursts on the same sub-swath overlap on the ground and coverage is contiguous. What each target loses is <em>time</em>: it is illuminated for only a fraction of its footprint crossing, which shortens the synthetic aperture and coarsens azimuth resolution. SweepSAR pulses at kHz rates under a kilometers-long footprint, so its coverage is continuous by a wide margin.</div>
+  <div class="note"><b>Where the gaps really are.</b> In ScanSAR and TOPS the antenna footprint is longer than the distance the platform moves during one full sub-swath cycle, so consecutive bursts on a sub-swath overlap on the ground and the coverage is contiguous. What each target loses is <em>time</em>: it is recorded for only part of its footprint crossing, which shortens the synthetic aperture and coarsens azimuth resolution. SweepSAR has no bursts, but it does have gaps, in <em>range</em>: the radar cannot receive while it transmits, so each transmit event blanks a band of the swath. NISAR moves those bands by dithering its PRF so that the missing samples can be filled (<a href="https://doi.org/10.1109/RADAR.2009.4977140">Freeman et al. 2009</a>; <a href="https://doi.org/10.1109/TGRS.2013.2282192">Villano et al. 2014</a>; <a href="https://doi.org/10.1109/AERO47225.2020.9172638">Kellogg et al. 2020</a>).</div>
 
   <p class="foot">Built for CIVE 6359 &mdash; SAR Remote Sensing. Companion animation clips are in the course slides.</p>
 </div>
@@ -148,25 +148,25 @@ const SUBN=["near","mid","far"];
 
 const MODES={
  stripmap:{name:"Stripmap", tag:"Fixed beam · continuous", call:"fixed beam · one swath · beam always on",
-   tlnote:"always on — continuous coverage",
-   desc:"The antenna points broadside and never moves. As the platform flies, the footprint sweeps out one long continuous strip on the ground — no gaps, one range swath.",
+   tlnote:"always on: continuous coverage",
+   desc:"The antenna points broadside and never moves. As the platform flies, the footprint sweeps out one long continuous strip on the ground, with no gaps, one range swath.",
    trade:"<b>Resolution:</b> moderate azimuth (set by the real antenna length). &nbsp; <b>Coverage:</b> one swath width, unlimited length. &nbsp; <b>Duty cycle:</b> 100% on one swath."},
  spotlight:{name:"Spotlight", tag:"Steered dwell · finest azimuth", call:"beam steers to dwell on one patch · longest aperture",
    tlnote:"the one patch is illuminated for the whole pass",
-   desc:"The beam is steered to keep staring at a single patch as the platform passes. That long dwell builds a long synthetic aperture, giving the finest azimuth resolution — at the cost of a small scene that is not contiguous along-track.",
+   desc:"The beam is steered to keep staring at a single patch as the platform passes. That long dwell builds a long synthetic aperture, giving the finest azimuth resolution, at the cost of a small scene that is not contiguous along-track.",
    trade:"<b>Resolution:</b> finest azimuth (longest synthetic aperture). &nbsp; <b>Coverage:</b> a single small patch. &nbsp; <b>Duty cycle:</b> 100% on one patch."},
  scansar:{name:"ScanSAR", tag:"Burst hopping · wide swath", call:"hops range sub-swaths in bursts · bursts overlap → no coverage gap",
-   tlnote:"each band lit ⅓ of the time — the gap is in time, not on the ground",
-   desc:"The beam hops between several range sub-swaths in bursts. Sharing time across bands images a much wider swath. Because the footprint is longer than the platform advances per cycle, bursts on each band overlap and the ground is fully covered — but every target is illuminated for only part of its footprint crossing, so azimuth resolution is coarser, and the uneven weighting across a burst causes scalloping.",
+   tlnote:"each band lit ⅓ of the time: the gap is in time, not on the ground",
+   desc:"The beam hops between several range sub-swaths in bursts. Sharing time across bands images a much wider swath. Because the footprint is longer than the platform advances per cycle, bursts on each band overlap and the ground is fully covered, but every target is illuminated for only part of its footprint crossing, so azimuth resolution is coarser, and the uneven weighting across a burst causes scalloping.",
    trade:"<b>Resolution:</b> coarser azimuth (short bursts). &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; scalloping."},
  tops:{name:"TOPS", tag:"Burst hopping + aft→fore sweep", call:"antenna steers aft→fore during each burst · bursts overlap → no gap",
-   tlnote:"each band lit ⅓ of the time — uniform weighting, no scalloping",
-   desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from aft to fore — backward to forward, the opposite of spotlight (watch the beam pivot between the dashed aft and fore ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
+   tlnote:"each band lit ⅓ of the time: uniform weighting, no scalloping",
+   desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from aft to fore (backward to forward, the opposite of spotlight; watch the beam pivot between the dashed aft and fore ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
    trade:"<b>Resolution:</b> coarser azimuth, but <b>uniform</b>. &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; no scalloping."},
- sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"each pulse: wide transmit, then a narrow receive beam swept in range (scan-on-receive)",
-   tlnote:"dark tick = transmit, rest = receive sweep · pulses overlap → continuous coverage",
-   desc:"A short antenna floods a very wide swath on transmit. On receive, a digitally formed narrow beam is swept in range to follow the returning echo down the swath (scan-on-receive). Watch one pulse at a time: the transmit flash covers the whole swath, then the receive beam walks from near range to far range as the echo arrives from progressively farther ground. The animation is time-stretched — in reality pulses repeat at kilohertz rates and the platform moves only a few meters between them, so coverage is continuous and there is no burst penalty. This is how NISAR images its 240 km swath at full resolution.",
-   trade:"<b>Resolution:</b> full azimuth (continuous pulses). &nbsp; <b>Coverage:</b> very wide swath (240 km on NISAR). &nbsp; <b>Duty cycle:</b> 100% on the whole swath."},
+ sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"scan on receive · echoes that arrive while the radar transmits are lost (blind range)",
+   tlnote:"recorded echoes per pulse · grey = blind range, moved every 3 pulses by PRF dithering",
+   desc:"A feed array illuminates a 12 m reflector so that one pulse lights the whole 242 km swath. On receive, a digitally formed narrow beam follows the echo from near to far range (scan on receive). The swath is so wide that several pulses are in flight at once, and the radar cannot receive while it transmits: every transmit event blanks a band of slant range (a blind range, c·τ wide, about 12 km for a 40 µs pulse). With a constant PRF those bands would leave stripes of missing data. NISAR dithers the PRF so the blind range moves from one block of pulses to the next, and neighboring pulses fill the gap when the data are resampled. The animation is time-stretched: real pulses repeat 1,000 to 4,000 times per second.",
+   trade:"<b>Resolution:</b> 7 m azimuth on NISAR, set by the antenna (no bursts). &nbsp; <b>Coverage:</b> 242 km swath. &nbsp; <b>Gaps:</b> blind ranges from transmit events, moved and filled by PRF dithering."},
 };
 const ORDER=["stripmap","spotlight","scansar","tops","sweepsar"];
 
@@ -282,32 +282,43 @@ function dashRect(x0,x1,z0,z1,color){
   const gl=new THREE.Line(eg,new THREE.LineDashedMaterial({color:new THREE.Color(color),dashSize:1.2,gapSize:0.8,transparent:true,opacity:0.95})); gl.computeLineDistances(); dyn.add(gl);
 }
 function fSweep(p){
+  // scan on receive with BLIND RANGES: echoes arriving while the radar transmits are lost (slant width c*tau);
+  // PRF dithering moves the blind band every NB pulses so neighboring pulses fill it.
   const x0=6,x1=X_MAX-6,sx=x0+(x1-x0)*p, LFs=6.0, sp=4.5, TXF=0.18, RXW=3.0, z0=R_NEAR, z1=R_FAR;
+  const BL=[0.63,0.38,0.80,0.27,0.52,0.70,0.45], HW=0.065, NB=3;
+  const band=k=>{const c=BL[Math.floor(k/NB)%BL.length]; return [z0+(z1-z0)*(c-HW), z0+(z1-z0)*(c+HW)];};
   const k=Math.floor((sx-x0)/sp), xk=x0+k*sp, u=((sx-x0)%sp)/sp;
-  for(let j=0;j<k;j++){ const xj=x0+j*sp; quad(xj-LFs/2,xj+LFs/2,z0,z1,cssv('--foot'),0.13,0.35); }
+  for(let j=0;j<k;j++){ const xj=x0+j*sp, [b0,b1]=band(j);
+    quad(xj-LFs/2,xj+LFs/2,z0,b0,cssv('--foot'),0.13,0.35); quad(xj-LFs/2,xj+LFs/2,b1,z1,cssv('--foot'),0.13,0.35); }
+  const [b0,b1]=band(k);
   if(u<TXF){
     beamVol(sx,xk-LFs/2,xk+LFs/2,z0,z1,cssv('--los'),0.34);
     quad(xk-LFs/2,xk+LFs/2,z0,z1,cssv('--los'),0.45,0.9);
     steerTxt="pulse "+(k+1)+"   TX \u25AE whole swath illuminated";
   }else{
     const v=(u-TXF)/(1-TXF), rz=z0+RXW+(z1-z0-2*RXW)*v;
+    const blocked = rz>b0-RXW*0.3 && rz<b1+RXW*0.3;
     quad(xk-LFs/2,xk+LFs/2,z0,z1,cssv('--foot'),0.10,0.8);
-    quad(xk-LFs/2,xk+LFs/2,z0,rz-RXW,cssv('--beam'),0.22);
-    beamVol(sx,xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,cssv('--beam'),0.38);
-    quad(xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,cssv('--beam'),0.85,0.9);
-    seg([xk-LFs/2,0.15,rz],[xk+LFs/2,0.15,rz],'#ffffff',0.9);
-    dashRect(xk-LFs/2,xk+LFs/2,z0,z0+2*RXW,cssv('--beam')); dashRect(xk-LFs/2,xk+LFs/2,z1-2*RXW,z1,cssv('--beam'));
-    seg([sx,ALT,0],[xk,0,rz],cssv('--beam'),1.0); seg([sx,ALT,0],[xk,0,z0],cssv('--track'),0.35);
-    const kk=Math.round(v*10); steerTxt="pulse "+(k+1)+"   RX \u25AE receive beam sweeps  near "+"\u25AE".repeat(kk)+"\u25AF".repeat(10-kk)+" far";
+    dashRect(xk-LFs/2,xk+LFs/2,b0,b1,'#5B6875');
+    quad(xk-LFs/2,xk+LFs/2,b0,b1,'#9AA5B1',0.35);
+    const col=blocked?'#9AA5B1':cssv('--beam');
+    beamVol(sx,xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,col,blocked?0.18:0.38);
+    quad(xk-LFs/2,xk+LFs/2,rz-RXW,rz+RXW,col,blocked?0.35:0.85,0.9);
+    seg([sx,ALT,0],[xk,0,rz],col,1.0); seg([sx,ALT,0],[xk,0,z0],cssv('--track'),0.35);
+    const kk=Math.round(v*10);
+    steerTxt = blocked ? "pulse "+(k+1)+"   RX \u25AF receiver off: the radar is transmitting (blind range)"
+                       : "pulse "+(k+1)+"   RX \u25AE receive beam sweeps  near "+"\u25AE".repeat(kk)+"\u25AF".repeat(10-kk)+" far";
   }
   sat(sx);
-  const n=Math.floor((x1-x0)/sp), ticks=[], tx=[]; for(let q=0;q<=n;q++){ ticks.push(q*sp/(x1-x0)); tx.push([q*sp/(x1-x0),(q*sp+TXF*sp)/(x1-x0)]); }
-  return [{name:"swath",iv:[[0,1]],ticks,tx}]; }
+  const n=Math.floor((x1-x0)/sp), rows=[];
+  return {pulseMap:{n,k,u,TXF,band:q=>band(q).map(y=>(y-z0)/(z1-z0))}};
+}
 const BUILD={stripmap:fStrip,spotlight:fSpot,scansar:p=>fBurst(p,false),tops:p=>fBurst(p,true),sweepsar:fSweep};
 
 /* ---------- timeline strip ---------- */
 const tl=document.getElementById('tl'), tctx=tl.getContext('2d');
 function drawTL(rows,t){
+  if(rows&&rows.pulseMap) return drawPulseMap(rows.pulseMap,t);
   const W=tl.clientWidth,H=tl.clientHeight; if(tl.width!==W*devicePixelRatio){tl.width=W*devicePixelRatio; tl.height=H*devicePixelRatio;}
   tctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); tctx.clearRect(0,0,W,H);
   const L=44, R=W-8, n=rows.length, rh=H/n;
@@ -322,6 +333,22 @@ function drawTL(rows,t){
     tctx.fillStyle=cssv('--muted'); tctx.textAlign='right'; tctx.fillText(r.name,L-6,y+h/2);
   });
   tctx.strokeStyle=cssv('--track'); tctx.lineWidth=1.5; tctx.beginPath(); tctx.moveTo(L+t*(R-L),2); tctx.lineTo(L+t*(R-L),H-2); tctx.stroke();
+}
+
+function drawPulseMap(m,t){
+  const W=tl.clientWidth,H=tl.clientHeight; if(tl.width!==W*devicePixelRatio){tl.width=W*devicePixelRatio; tl.height=H*devicePixelRatio;}
+  tctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); tctx.clearRect(0,0,W,H);
+  const L=58,R=W-8,w=(R-L)/(m.n+1);
+  tctx.font='10px "JetBrains Mono",monospace'; tctx.fillStyle=cssv('--muted'); tctx.textAlign='right'; tctx.textBaseline='middle';
+  tctx.fillText('far',L-6,6); tctx.fillText('near',L-6,H-6); tctx.fillText('range',L-6,H/2);
+  for(let q=0;q<=m.n;q++){
+    const x=L+q*w, [c0,c1]=m.band(q), done=q<m.k||(q===m.k&&m.u>=m.TXF);
+    tctx.globalAlpha=done?0.85:0.2; tctx.fillStyle=cssv('--foot');
+    tctx.fillRect(x,H-c0*H,w*0.9,c0*H); tctx.fillRect(x,0,w*0.9,H-c1*H);
+    tctx.globalAlpha=1; tctx.fillStyle=cssv('--tl-bg'); tctx.fillRect(x,H-c1*H,w*0.9,(c1-c0)*H);
+    tctx.strokeStyle=cssv('--muted'); tctx.lineWidth=0.6; tctx.strokeRect(x,H-c1*H,w*0.9,(c1-c0)*H);
+  }
+  tctx.strokeStyle=cssv('--track'); tctx.lineWidth=1.5; const xc=L+(m.k+0.45)*w; tctx.beginPath(); tctx.moveTo(xc,0); tctx.lineTo(xc,H); tctx.stroke();
 }
 
 /* ---------- loop ---------- */
