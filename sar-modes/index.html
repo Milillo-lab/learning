@@ -159,9 +159,9 @@ const MODES={
    tlnote:"each band lit ⅓ of the time — the gap is in time, not on the ground",
    desc:"The beam hops between several range sub-swaths in bursts. Sharing time across bands images a much wider swath. Because the footprint is longer than the platform advances per cycle, bursts on each band overlap and the ground is fully covered — but every target is illuminated for only part of its footprint crossing, so azimuth resolution is coarser, and the uneven weighting across a burst causes scalloping.",
    trade:"<b>Resolution:</b> coarser azimuth (short bursts). &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; scalloping."},
- tops:{name:"TOPS", tag:"Burst hopping + fore→aft sweep", call:"antenna steers fore→aft during each burst · bursts overlap → no gap",
+ tops:{name:"TOPS", tag:"Burst hopping + aft→fore sweep", call:"antenna steers aft→fore during each burst · bursts overlap → no gap",
    tlnote:"each band lit ⅓ of the time — uniform weighting, no scalloping",
-   desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from fore to aft (watch the beam pivot between the dashed fore and aft ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
+   desc:"Terrain Observation by Progressive Scans works like ScanSAR, but during each burst the antenna is steered electronically from aft to fore — backward to forward, the opposite of spotlight (watch the beam pivot between the dashed aft and fore ghosts). Because the beam sweeps the ground faster than the platform moves, each burst covers more ground, so there are fewer, longer bursts per band. Every target sees the whole beam pattern, so azimuth weighting is uniform and scalloping disappears. This is Sentinel-1's Interferometric Wide mode. Bursts still overlap on the ground; the duty cycle per band is the same as ScanSAR.",
    trade:"<b>Resolution:</b> coarser azimuth, but <b>uniform</b>. &nbsp; <b>Coverage:</b> wide swath, contiguous. &nbsp; <b>Duty cycle:</b> ~⅓ per band; no scalloping."},
  sweepsar:{name:"SweepSAR / NISAR", tag:"Scan-on-receive · very wide swath", call:"each pulse: wide transmit, then a narrow receive beam swept in range (scan-on-receive)",
    tlnote:"dark tick = transmit, rest = receive sweep · pulses overlap → continuous coverage",
@@ -261,7 +261,7 @@ function fBurst(p,tops){
   const [z0,z1]=SUB[active], zc=0.5*(z0+z1), sq=tops?(sg-0.5)*2*sweep:0;
   if(tops){
     const bstart=x0+Math.floor(phase/badv)*badv;
-    for(const gx of [bstart-sweep, bstart+badv+sweep]){
+    for(const [gx,lab] of [[bstart-sweep,"aft"],[bstart+badv+sweep,"fore"]]){
       const eg=new THREE.BufferGeometry(); eg.setAttribute('position',new THREE.Float32BufferAttribute([gx-LF/2,0.12,z0,gx+LF/2,0.12,z0,gx+LF/2,0.12,z1,gx-LF/2,0.12,z1,gx-LF/2,0.12,z0],3));
       const gl=new THREE.Line(eg,new THREE.LineDashedMaterial({color:new THREE.Color(cssv('--beam')),dashSize:1.2,gapSize:0.8,transparent:true,opacity:0.95})); gl.computeLineDistances(); dyn.add(gl);
     }
@@ -269,7 +269,7 @@ function fBurst(p,tops){
     seg([sx,ALT,0],[sx+sq,0,zc],cssv('--beam'),1.0);
     seg([sx,ALT,0],[sx,0,zc],cssv('--track'),0.35);
     beamVol(sx,sx-LF/2+sq,sx+LF/2+sq,z0,z1,cssv('--beam'),0.26);
-    const k=Math.round(sg*10); steerTxt="antenna steering:  fore "+"\u25AE".repeat(k)+"\u25AF".repeat(10-k)+" aft";
+    const k=Math.round(sg*10); steerTxt="antenna steering:  aft "+"\u25AE".repeat(k)+"\u25AF".repeat(10-k)+" fore";
   }else{ beamVol(sx,sx-LF/2,sx+LF/2,z0,z1,cssv('--los'),0.18); steerTxt=""; }
   quad(sx-LF/2+sq,sx+LF/2+sq,z0,z1,cssv('--foot'),0.55,0.9);
   sat(sx);
