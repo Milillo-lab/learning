@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Height of Ambiguity</title>
+<meta name="description" content="Interactive fringe simulator for SAR interferometry: change the baseline, the band and the incidence angle and watch topographic fringes and the height of ambiguity respond, on real Copernicus DEMs. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:980px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:66ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block}
+.app{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-top:8px}
+@media (max-width:820px){ .app{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:14px}
+canvas{width:100%; height:auto; display:block; border-radius:8px; image-rendering:auto; background:#000}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select{font:inherit; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+.read{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.stat{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:8px 10px}
+.stat .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:20px; font-weight:600}
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px; color:var(--ink)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+ol.try li{margin:6px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:68ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Height of ambiguity</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Height of ambiguity</h1>
+  <p class="lede">Two radar passes that see the ground from slightly different positions record slightly different distances to every hill. The difference shows up as fringes. How much height fits inside one fringe depends on the baseline, the wavelength and the viewing geometry. Steer them and watch.</p>
+
+  <h2>The idea in one equation</h2>
+  <p class="serif">The interferometric phase measures the difference in distance from the two antennas, in steps of half a wavelength. For a point at height <i>h</i> above the reference surface, the topographic part of that phase is</p>
+  <div class="eq">φ<sub>topo</sub> = 4π B<sub>⊥</sub> h / (λ R sin θ)</div>
+  <p class="serif">where B<sub>⊥</sub> is the perpendicular baseline, λ the wavelength, R the slant range and θ the incidence angle. One full fringe (2π) corresponds to a height change of</p>
+  <div class="eq">h<sub>a</sub> = λ R sin θ / (2 B<sub>⊥</sub>)</div>
+  <p class="serif">This is the <b>height of ambiguity</b>. A small h<sub>a</sub> packs many fringes onto a mountain and makes a sensitive height meter; a large h<sub>a</sub> makes the interferogram almost blind to topography, which is what you want when you are measuring ground motion instead.</p>
+
+  <h2>Simulator</h2>
+  <div class="app">
+    <div class="card">
+      <canvas id="cv" width="540" height="540"></canvas>
+      <div class="cap" id="credit"></div>
+    </div>
+    <div class="card">
+      <label>Terrain</label>
+      <select id="site">
+        <option value="fuego">Fuego and Acatenango, Guatemala (3,200 m of relief)</option>
+        <option value="kiri">Kirishima, Japan (topography)</option>
+        <option value="kiridh">Kirishima: error from a DEM made in 2000</option>
+      </select>
+      <label>Radar</label>
+      <select id="sensor">
+        <option value="s1">Sentinel-1, C band (λ = 5.55 cm)</option>
+        <option value="nisar">NISAR, L band (λ = 24.2 cm)</option>
+      </select>
+      <label>Perpendicular baseline B<sub>⊥</sub> <span class="val" id="bv"></span></label>
+      <input type="range" id="bp" min="0" max="400" step="1" value="100">
+      <label>Incidence angle θ <span class="val" id="tv"></span></label>
+      <input type="range" id="th" min="25" max="50" step="0.5" value="35">
+      <div class="chk"><input type="checkbox" id="flat"><span>add the flat-Earth fringes</span></div>
+      <div class="chk"><input type="checkbox" id="shade" checked><span>show the terrain under the fringes</span></div>
+      <div class="read">
+        <div class="stat"><div class="k">h<sub>a</sub></div><div class="v" id="ha"></div></div>
+        <div class="stat"><div class="k">fringes</div><div class="v" id="nf"></div></div>
+        <div class="stat"><div class="k">slant range R</div><div class="v" id="rr"></div></div>
+        <div class="stat"><div class="k">flat-Earth spacing</div><div class="v" id="fs"></div></div>
+      </div>
+      <div class="cap">Radar looks from the left (ground range increases to the right). Terrain is shown in map geometry, so layover and shadow are ignored.</div>
+    </div>
+  </div>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>On Fuego with Sentinel-1, find the baseline that puts exactly one fringe between the base and the summit. Now switch to NISAR at the same baseline. How many fringes are left, and why is the ratio larger than the ratio of the two wavelengths?</li>
+    <li>Turn on the flat-Earth fringes and set B<sub>⊥</sub> near 100 m. Measure the spacing on the ground and compare it with the readout. Processing chains remove these fringes before anyone looks for topography or motion.</li>
+    <li>Choose "Kirishima: error from a DEM made in 2000". Lava filled the Shinmoedake crater in 2011, so a DEM built from the Shuttle mission of February 2000 is up to about 100 m too low there. (Elsewhere the two DEMs differ by a few metres to a few tens of metres, mostly over forest, because the two radars saw the canopy differently.) Which baseline turns that error into a full fringe with Sentinel-1? With NISAR?</li>
+    <li>Set B<sub>⊥</sub> to zero. What survives, and what does that tell you about the pairs you would choose to measure millimetres of ground motion?</li>
+  </ol>
+
+  <h2>Read more</h2>
+  <p class="serif">Rosen, P.A., et al. (2000). Synthetic aperture radar interferometry. <i>Proceedings of the IEEE</i> 88(3), 333–382. <a href="https://doi.org/10.1109/5.838084">doi:10.1109/5.838084</a><br>
+  Bamler, R., Hartl, P. (1998). Synthetic aperture radar interferometry. <i>Inverse Problems</i> 14(4), R1–R54. <a href="https://doi.org/10.1088/0266-5611/14/4/001">doi:10.1088/0266-5611/14/4/001</a><br>
+  Hanssen, R.F. (2001). <i>Radar Interferometry: Data Interpretation and Error Analysis</i>. Kluwer. <a href="https://doi.org/10.1007/0-306-47633-9">doi:10.1007/0-306-47633-9</a></p>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, University of Houston. Terrain: Copernicus DEM GLO-30, © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA; NASADEM, NASA JPL (2020), from Shuttle Radar Topography Mission data of February 2000. Radar parameters: wavelengths from the Sentinel-1 and NISAR product metadata; slant range computed for a spherical Earth from orbit heights of 693 km (Sentinel-1) and 747 km (NISAR).</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){}};
+
+const META={"fuego":{"file":"fuego_cop30.png","min":774.6510620117188,"max":3968.36962890625,"w":270,"hgt":270,"dx":59.88},
+ "kiri":{"file":"kirishima_cop30.png","min":781.7498168945312,"max":1688.8345947265625,"w":216,"hgt":162,"dx":26.25},
+ "kiridh":{"file":"kirishima_dh.png","min":-37.745849609375,"max":101.3358154296875,"w":216,"hgt":162,"dx":26.25}};
+const CREDIT={fuego:"Copernicus DEM GLO-30 over Fuego and Acatenango, 30 m (shown at 60 m).",
+ kiri:"Copernicus DEM GLO-30 over the Kirishima volcano group; Shinmoedake is the crater near the centre.",
+ kiridh:"Copernicus DEM (TanDEM-X, 2011 to 2015) minus NASADEM (SRTM, February 2000). The +100 m spot is the lava that filled Shinmoedake crater in 2011."};
+const SENS={s1:{lam:0.05546576,H:693e3}, nisar:{lam:0.24196,H:747e3}};
+const RE=6371e3;
+function slantRange(H,thDeg){ // spherical Earth: incidence theta at the ground -> slant range
+  const th=thDeg*Math.PI/180, a=RE+H; const look=Math.asin(RE*Math.sin(th)/a);
+  const gam=th-look; return Math.sqrt(a*a+RE*RE-2*a*RE*Math.cos(gam)); }
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const cache={};
+function load(site){ return new Promise(res=>{ if(cache[site]) return res(cache[site]);
+  const m=META[site], img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=m.w; c.height=m.hgt;
+    const g=c.getContext('2d'); g.drawImage(img,0,0); const d=g.getImageData(0,0,m.w,m.hgt).data; const h=new Float32Array(m.w*m.hgt);
+    for(let i=0;i<h.length;i++){ h[i]=m.min+((d[4*i]<<8)+d[4*i+1])/65535*(m.max-m.min); }
+    const sh=new Float32Array(m.w*m.hgt); // hillshade
+    for(let y=0;y<m.hgt;y++)for(let x=0;x<m.w;x++){ const i=y*m.w+x; const xl=Math.max(0,x-1),xr=Math.min(m.w-1,x+1),yu=Math.max(0,y-1),yd=Math.min(m.hgt-1,y+1);
+      const dzdx=(h[y*m.w+xr]-h[y*m.w+xl])/((xr-xl)*m.dx), dzdy=(h[yd*m.w+x]-h[yu*m.w+x])/((yd-yu)*m.dx);
+      const nx=-dzdx, ny=-dzdy, nz=1, n=Math.hypot(nx,ny,nz); sh[i]=Math.max(0,(nx*-0.5+ny*-0.5+nz*0.7)/n/1.0); }
+    cache[site]={h,sh,m}; res(cache[site]); }; img.src=m.file; }); }
+function hsv(p){ // cyclic colour for phase in [0,1)
+  const h=p*6, i=Math.floor(h)%6, f=h-Math.floor(h); const q=1-f, t=f;
+  return [[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i]; }
+async function draw(){
+  const site=document.getElementById('site').value, sen=SENS[document.getElementById('sensor').value];
+  const B=+document.getElementById('bp').value, th=+document.getElementById('th').value;
+  const flat=document.getElementById('flat').checked, shade=document.getElementById('shade').checked;
+  document.getElementById('bv').textContent=B+' m'; document.getElementById('tv').textContent=th.toFixed(1)+'°';
+  const {h,m}=await load(site); const sh=(await load(site==='kiridh'?'kiri':site)).sh; const R=slantRange(sen.H,th); const s=Math.sin(th*Math.PI/180), c=Math.cos(th*Math.PI/180);
+  const ha=B>0? sen.lam*R*s/(2*B) : Infinity;
+  const rel=(site==='kiridh')? (m.max-0) : (m.max-m.min);
+  document.getElementById('ha').textContent=isFinite(ha)? (ha>=10000? (ha/1000).toFixed(0)+' km' : ha.toFixed(0)+' m') : '∞';
+  document.getElementById('nf').textContent=isFinite(ha)? (rel/ha).toFixed(2) : '0';
+  document.getElementById('rr').textContent=(R/1000).toFixed(0)+' km';
+  document.getElementById('fs').textContent=B>0? (sen.lam*R/(2*B*c)).toFixed(0)+' m' : '∞';
+  document.getElementById('credit').textContent=CREDIT[site];
+  cv.width=540; cv.height=Math.round(540*m.hgt/m.w); const W=cv.width, Hh=cv.height, img=ctx.createImageData(W,Hh);
+  const k=4*Math.PI*B/(sen.lam*R*s), kf=4*Math.PI*B*c/(sen.lam*R);
+  const sx=m.w/W, sy=m.hgt/Hh;
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++){ const i=Math.min(m.hgt-1,Math.floor(y*sy))*m.w+Math.min(m.w-1,Math.floor(x*sx));
+    let ph=k*h[i]; if(flat) ph+=kf*(x*sx*m.dx); let p=(ph/(2*Math.PI))%1; if(p<0)p+=1;
+    const col=hsv(p); const a=shade? (0.45+0.55*sh[i]) : 1; const o=4*(y*W+x);
+    img.data[o]=255*col[0]*a; img.data[o+1]=255*col[1]*a; img.data[o+2]=255*col[2]*a; img.data[o+3]=255; }
+  ctx.putImageData(img,0,0);
+}
+['site','sensor','bp','th','flat','shade'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+draw();
+</script>
+</body>
+</html>
