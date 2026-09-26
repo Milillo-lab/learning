@@ -114,8 +114,8 @@ ol.try li{margin:6px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; 
   <ol class="try">
     <li>On Fuego with Sentinel-1, find the baseline that puts exactly one fringe between the base and the summit. Now switch to NISAR at the same baseline. How many fringes are left, and why is the ratio larger than the ratio of the two wavelengths?</li>
     <li>Turn on the flat-Earth fringes and set B<sub>⊥</sub> near 100 m. Measure the spacing on the ground and compare it with the readout. Processing chains remove these fringes before anyone looks for topography or motion.</li>
-    <li>Choose "Kirishima: error from a DEM made in 2000". Lava filled the Shinmoedake crater in 2011, so a DEM built from the Shuttle mission of February 2000 is up to about 100 m too low there. (Elsewhere the two DEMs differ by a few metres to a few tens of metres, mostly over forest, because the two radars saw the canopy differently.) Which baseline turns that error into a full fringe with Sentinel-1? With NISAR? Then see the <a href="../insar-dem-error-kirishima/">real Sentinel-1 test at Kirishima</a>.</li>
-    <li>Set B<sub>⊥</sub> to zero. What survives, and what does that tell you about the pairs you would choose to measure millimetres of ground motion?</li>
+    <li>Choose "Kirishima: error from a DEM made in 2000". Lava filled the Shinmoedake crater in 2011, so a DEM built from the Shuttle mission of February 2000 is up to about 100 m too low there. (Elsewhere the two DEMs differ by a few meters to a few tens of meters, mostly over forest, because the two radars saw the canopy differently.) Which baseline turns that error into a full fringe with Sentinel-1? With NISAR? Then see the <a href="../insar-dem-error-kirishima/">real Sentinel-1 test at Kirishima</a>.</li>
+    <li>Set B<sub>⊥</sub> to zero. What survives, and what does that tell you about the pairs you would choose to measure millimeters of ground motion?</li>
   </ol>
 
   <h2>Read more</h2>
@@ -133,7 +133,7 @@ const META={"fuego":{"file":"fuego_cop30.png","min":774.6510620117188,"max":3968
  "kiri":{"file":"kirishima_cop30.png","min":781.7498168945312,"max":1688.8345947265625,"w":216,"hgt":162,"dx":26.25},
  "kiridh":{"file":"kirishima_dh.png","min":-37.745849609375,"max":101.3358154296875,"w":216,"hgt":162,"dx":26.25}};
 const CREDIT={fuego:"Copernicus DEM GLO-30 over Fuego and Acatenango, 30 m (shown at 60 m).",
- kiri:"Copernicus DEM GLO-30 over the Kirishima volcano group; Shinmoedake is the crater near the centre.",
+ kiri:"Copernicus DEM GLO-30 over the Kirishima volcano group; Shinmoedake is the crater near the center.",
  kiridh:"Copernicus DEM (TanDEM-X, 2011 to 2015) minus NASADEM (SRTM, February 2000). The +100 m spot is the lava that filled Shinmoedake crater in 2011."};
 const SENS={s1:{lam:0.05546576,H:693e3}, nisar:{lam:0.24196,H:747e3}};
 const RE=6371e3;
@@ -151,7 +151,7 @@ function load(site){ return new Promise(res=>{ if(cache[site]) return res(cache[
       const dzdx=(h[y*m.w+xr]-h[y*m.w+xl])/((xr-xl)*m.dx), dzdy=(h[yd*m.w+x]-h[yu*m.w+x])/((yd-yu)*m.dx);
       const nx=-dzdx, ny=-dzdy, nz=1, n=Math.hypot(nx,ny,nz); sh[i]=Math.max(0,(nx*-0.5+ny*-0.5+nz*0.7)/n/1.0); }
     cache[site]={h,sh,m}; res(cache[site]); }; img.src=m.file; }); }
-function hsv(p){ // cyclic colour for phase in [0,1)
+function hsv(p){ // cyclic color for phase in [0,1)
   const h=p*6, i=Math.floor(h)%6, f=h-Math.floor(h); const q=1-f, t=f;
   return [[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i]; }
 async function draw(){
