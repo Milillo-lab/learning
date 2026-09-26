@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kirishima DEM Error</title>
+<meta name="description" content="A lava dome filled the Shinmoedake crater in 2011; an elevation model from 2000 misses it. Predict the fringes the error leaves in an interferogram, then check against real Sentinel-1 data processed with ISCE2. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:980px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:66ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block}
+.app{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-top:8px}
+@media (max-width:820px){ .app{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:14px}
+canvas{width:100%; height:auto; display:block; border-radius:8px; image-rendering:auto; background:#000}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select{font:inherit; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+.read{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.stat{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:8px 10px}
+.stat .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:20px; font-weight:600}
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px; color:var(--ink)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+ol.try li{margin:6px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:68ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+
+.tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
+.tabs button{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.04em; background:var(--panel-2); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 9px; cursor:pointer}
+.tabs button.on{background:var(--track); color:#fff; border-color:var(--track)}
+.legend{display:flex; align-items:center; gap:10px; font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--muted); margin-top:8px; min-height:16px}
+.bar{display:inline-block; width:150px; height:10px; border-radius:3px; border:1px solid var(--rule)}
+.dzbar{background:linear-gradient(90deg,#1a33ff,#fff,#ff1a1a)}
+.cohbar{background:linear-gradient(90deg,#000,#fff)}
+.phbar{background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.probe{margin-top:14px; font-size:12.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:9px 10px; min-height:84px; color:var(--ink)}
+.read3{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px}
+@media (max-width:620px){ .read3{grid-template-columns:1fr 1fr} }
+#chart{background:transparent}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / <a href="../insar-height-of-ambiguity/">Height of ambiguity</a> / Kirishima</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>The volcano grew. The map did not.</h1>
+  <p class="lede">In 2011 lava filled the Shinmoedake crater on Kirishima, in southern Japan. An elevation model made in 2000 still shows the old, empty crater. Use that model to remove topography from an interferogram and the missing lava comes back as fringes. Here you can predict them, and then check the prediction against real Sentinel-1 data.</p>
+
+  <h2>What changed on the volcano</h2>
+  <p class="serif">Shinmoedake erupted in January 2011 and a lava dome grew until it filled most of the crater floor (<a href="https://doi.org/10.1186/s40623-023-01834-3">Earth, Planets and Space, 2023</a>). Two global elevation models sit on either side of that event. <b>NASADEM</b> comes from the Shuttle Radar Topography Mission of February 2000, before the dome. The <b>Copernicus DEM</b> comes from TanDEM-X data acquired between 2011 and 2015, after it. Subtract one from the other and the crater stands out: the newer model is higher by up to about 100 m.</p>
+  <p class="serif">Interferometry turns a height error into phase. If the model used to remove the topography is wrong by Δh, the interferogram keeps a residual</p>
+  <div class="eq">φ<sub>DEM</sub> = 4π B<sub>⊥</sub> Δh / (λ R sin θ) = 2π Δh / h<sub>a</sub></div>
+  <p class="serif">so the error leaves Δh/h<sub>a</sub> fringes. The residual grows with the perpendicular baseline B<sub>⊥</sub> and vanishes when B<sub>⊥</sub> is zero. That dependence on B<sub>⊥</sub> is how you tell a DEM error apart from ground motion, which does not depend on B<sub>⊥</sub> at all.</p>
+
+  <h2>Explore</h2>
+  <div class="app">
+    <div class="card">
+      <div class="tabs" id="tabs">
+        <button data-l="shade">Terrain</button>
+        <button data-l="dz" class="on">DEM change</button>
+        <button data-l="sim">Your prediction</button>
+        <button data-l="sep_nasadem">Sep: NASADEM</button>
+        <button data-l="sep_cop">Sep: Copernicus</button>
+        <button data-l="sep_diff">Sep: difference</button>
+        <button data-l="jul_diff">Jul: control</button>
+        <button data-l="sep_coh">Coherence</button>
+      </div>
+      <canvas id="cv" width="576" height="504"></canvas>
+      <div class="legend" id="legend"></div>
+      <div class="cap" id="credit"></div>
+    </div>
+    <div class="card">
+      <label>View</label>
+      <select id="zoom">
+        <option value="full">Whole volcano group (16 × 16 km)</option>
+        <option value="crater">Shinmoedake crater (4 × 4 km)</option>
+      </select>
+      <label>Radar for your prediction</label>
+      <select id="sensor">
+        <option value="s1">Sentinel-1, C band, this pass (R 899 km, θ 38°)</option>
+        <option value="nisar">NISAR, L band (R 1040 km, θ 47°)</option>
+      </select>
+      <label>Perpendicular baseline B<sub>⊥</sub> <span class="val" id="bv"></span></label>
+      <input type="range" id="bp" min="0" max="400" step="1" value="60">
+      <div class="read">
+        <div class="stat"><div class="k">h<sub>a</sub></div><div class="v" id="ha"></div></div>
+        <div class="stat"><div class="k">crater fringes</div><div class="v" id="nf"></div></div>
+      </div>
+      <div class="probe" id="probe">Move over the image to read a pixel.</div>
+      <div class="cap">Geocoded, north up. Sentinel-1 descending pass: flying south-southwest, looking west.</div>
+    </div>
+  </div>
+
+  <h2>The real experiment</h2>
+  <p class="serif">We took two pairs of Sentinel-1 images over Kirishima and processed each pair twice with the open-source ISCE2 software, changing only the elevation model used to remove the topography. The pair of <b>2 and 14 September 2026</b> has B<sub>⊥</sub> = −118 m. The pair of <b>16 and 28 July 2026</b> has B<sub>⊥</sub> = −1.4 m and serves as the control: at that baseline even a 100 m error should leave almost no phase. Subtracting the two runs of a pair cancels everything they share (ground motion, atmosphere, noise) and leaves only the phase of the DEM error. Open the three "Sep" tabs and the "Jul" tab above to see each step.</p>
+  <div class="card">
+    <canvas id="chart" width="900" height="380"></canvas>
+    <div class="cap">Dots: the measured phase difference between the two runs, averaged over all coherent pixels (coherence above 0.4) in 5 m bins of height error. Lines: the prediction 2πΔh/h<sub>a</sub> from the processor's own geometry. The dashed grey line follows your baseline slider (Sentinel-1 geometry). The sign of the phase follows the sign of B<sub>⊥</sub>, which is negative for both of these pairs; the slider line uses the same sign.</div>
+    <div class="read3" id="stats"></div>
+  </div>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>Before you open the September tabs, use "Your prediction" with Sentinel-1 at B<sub>⊥</sub> = 118 m. How many fringes should the crater show? Then open "Sep: difference" and compare.</li>
+    <li>Compare "Sep: NASADEM" with "Sep: Copernicus" in the crater view. Where do the two differ, and where do they look the same? The ring of colour around the crater appears in both: what does that tell you about its cause?</li>
+    <li>Why does the July pair show nothing in the crater, even though the elevation model is just as wrong?</li>
+    <li>Switch your prediction to NISAR. What baseline would NISAR need to show the same crater signal as Sentinel-1 at 118 m? What does that mean for NISAR pairs processed with an old elevation model?</li>
+    <li>Look at the coherence. The crater stays coherent over 12 days while the forested flanks do not. Which part of the chart would be missing if the crater had decorrelated?</li>
+  </ol>
+
+  <h2>How it was made</h2>
+  <p class="serif">Sentinel-1D, descending track 163, sub-swath IW2, bursts 348849 to 348851, VV polarization, assembled from ASF burst products with burst2safe. Precise orbits (POEORB) for 16 July, 28 July and 2 September; restituted orbits (RESORB) for 14 September, because precise orbits were not yet published. ISCE2 topsApp with 7 × 2 looks and enhanced spectral diversity; no unwrapping. Both elevation models were converted to heights above the WGS84 ellipsoid with the EGM96 (NASADEM) and EGM2008 (Copernicus) geoid models before processing. The difference images are the product of one run with the complex conjugate of the other, averaged over 5 × 5 pixels. Fitting the September difference against Δh gives h<sub>a</sub> = 127 m against 131 m predicted.</p>
+
+  <h2>Read more</h2>
+  <p class="serif">Rosen, P.A., et al. (2000). Synthetic aperture radar interferometry. <i>Proceedings of the IEEE</i> 88(3), 333–382. <a href="https://doi.org/10.1109/5.838084">doi:10.1109/5.838084</a><br>
+  Farr, T.G., et al. (2007). The Shuttle Radar Topography Mission. <i>Reviews of Geophysics</i> 45, RG2004. <a href="https://doi.org/10.1029/2005RG000183">doi:10.1029/2005RG000183</a><br>
+  Rosen, P.A., Gurrola, E., Sacco, G.F., Zebker, H. (2012). The InSAR Scientific Computing Environment. <i>EUSAR 2012</i>. <a href="https://github.com/isce-framework/isce2">ISCE2 on GitHub</a><br>
+  Companion page: <a href="../insar-height-of-ambiguity/">Height of ambiguity simulator</a></p>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, University of Houston. Contains modified Copernicus Sentinel data (2026), processed with ISCE2. Copernicus DEM GLO-30, © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA. NASADEM, NASA JPL (2020), from Shuttle Radar Topography Mission data of February 2000.</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} drawChart();};
+
+const M={"w": 576, "h": 504, "lon0": 130.8, "lat0": 31.979999999999997, "dlon": 0.0002777777777777778, "dlat": -0.0002777777777777778, "dz_lo": -60.0, "dz_hi": 120.0, "dz_max": 102.807861328125, "dx": 26.24923883231262, "chart": {"A_0716_0728": {"x": [-12.5, -7.5, -2.5, 2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5, 77.5, 82.5, 87.5, 92.5, 97.5, 102.5], "y": [0.002, -0.0, -0.001, -0.003, -0.005, -0.008, -0.012, -0.017, -0.022, -0.024, -0.029, -0.032, -0.031, -0.039, -0.038, -0.043, -0.049, -0.053, -0.053, -0.053, -0.053, -0.057, -0.064, -0.065], "bperp": -1.4, "ha_pred": 11049.6, "ha_meas": 8976.0, "coh_crater": 0.79, "coh_scene": 0.34}, "B_0902_0914": {"x": [-12.5, -7.5, -2.5, 2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5, 77.5, 82.5, 87.5, 92.5, 97.5, 102.5], "y": [0.241, 0.137, 0.085, -0.037, -0.188, -0.366, -0.578, -0.766, -1.06, -1.246, -1.747, -1.945, -1.928, -2.507, -2.406, -2.693, -3.198, -3.586, -3.743, -3.498, -3.454, -3.768, -4.293, -4.391], "bperp": -117.6, "ha_pred": 130.7, "ha_meas": 127.4, "coh_crater": 0.74, "coh_scene": 0.33}}};
+const W=M.w, H=M.h;
+const SENS={s1:{lam:0.05546576,R:899.5e3,th:38.0}, nisar:{lam:0.24196,R:1040.4e3,th:46.7}};
+const ZOOM={full:[0,0,W,H], crater:[223,180,151,122]};
+const CREDIT={shade:"Copernicus DEM (TanDEM-X, 2011 to 2015), hillshade. Shinmoedake is the crater near the centre; Karakunidake, the highest peak, is to its northwest.",
+ dz:"Copernicus DEM minus NASADEM. Red: the newer model is higher. The +100 m spot is the 2011 lava in Shinmoedake. The smaller speckle of ±10 to 20 m elsewhere is mostly forest canopy, seen differently by the two radars.",
+ sim:"Simulated: the phase that the NASADEM error would leave at your baseline, 2πΔh/h_a, with the sign of this pass (B⊥ negative), in the same colours as the real data.",
+ sep_nasadem:"Real interferogram, 2 to 14 September 2026 (B⊥ = −118 m), topography removed with NASADEM (2000). Filtered for display.",
+ sep_cop:"The same pair, topography removed with the Copernicus DEM (2011 to 2015). Everything else in the processing is identical.",
+ sep_diff:"The first run times the complex conjugate of the second: only the DEM error is left. Grey: coherence below 0.25.",
+ jul_diff:"The same test on the control pair, 16 to 28 July 2026 (B⊥ = −1.4 m, h_a ≈ 11 km). The DEM error is the same, but at this baseline it leaves almost no phase.",
+ sep_coh:"Coherence of the September pair, black 0 to white 1. The bare lava in the crater stays coherent; the forested flanks decorrelate in 12 days."};
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const imgs={}, data={};
+let layer='dz';
+function loadImg(src){return new Promise(r=>{const i=new Image(); i.onload=()=>r(i); i.src=src;});}
+function readData(img){const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d'); g.drawImage(img,0,0); return g.getImageData(0,0,W,H).data;}
+async function init(){
+  for(const k of ['shade','sep_nasadem','sep_cop','sep_diff','jul_diff','sep_coh']) imgs[k]=await loadImg(k+'.png');
+  const d1=readData(await loadImg('data1.png')), d2=readData(await loadImg('data2.png')), sh=readData(imgs.shade);
+  data.dz=new Float32Array(W*H); data.pB=new Float32Array(W*H); data.cB=new Float32Array(W*H); data.pA=new Float32Array(W*H); data.cA=new Float32Array(W*H); data.sh=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++){ data.dz[i]=M.dz_lo+((d1[4*i]<<8)+d1[4*i+1])/65535*(M.dz_hi-M.dz_lo);
+    data.pB[i]=d1[4*i+2]/255*2*Math.PI-Math.PI; data.cB[i]=d2[4*i]/255; data.pA[i]=d2[4*i+1]/255*2*Math.PI-Math.PI; data.cA[i]=d2[4*i+2]/255; data.sh[i]=sh[4*i]/255; }
+  draw(); drawChart();
+}
+function hsv(p){const h=p*6,i=Math.floor(h)%6,f=h-Math.floor(h),q=1-f,t=f; return [[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i];}
+function divRGB(v){ // blue-white-red, v in [-1,1]
+  const a=Math.min(1,Math.abs(v)); return v>=0? [1,1-0.85*a,1-0.9*a] : [1-0.9*a,1-0.8*a,1]; }
+function ha(){const s=SENS[document.getElementById('sensor').value], B=+document.getElementById('bp').value; return B>0? s.lam*s.R*Math.sin(s.th*Math.PI/180)/(2*B) : Infinity;}
+function layerCanvas(){ // full-resolution offscreen canvas for the current layer
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+  if(imgs[layer]){ g.drawImage(imgs[layer],0,0); return c; }
+  const im=g.createImageData(W,H), h=ha();
+  for(let i=0;i<W*H;i++){ let col; const s=data.sh[i];
+    if(layer==='dz'){ const d=data.dz[i]; const base=divRGB(d/100); const a=0.55+0.45*s; col=[base[0]*a,base[1]*a,base[2]*a]; }
+    else { const ph=isFinite(h)? -2*Math.PI*data.dz[i]/h : 0; const w=Math.atan2(Math.sin(ph),Math.cos(ph)); const b=hsv((w+Math.PI)/(2*Math.PI)%1), a=0.45+0.55*s; col=[b[0]*a,b[1]*a,b[2]*a]; }
+    im.data[4*i]=255*col[0]; im.data[4*i+1]=255*col[1]; im.data[4*i+2]=255*col[2]; im.data[4*i+3]=255; }
+  g.putImageData(im,0,0); return c; }
+function arrow(x0,y0,x1,y1,col,lab){ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  const a=Math.atan2(y1-y0,x1-x0); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1-11*Math.cos(a-0.4),y1-11*Math.sin(a-0.4)); ctx.lineTo(x1-11*Math.cos(a+0.4),y1-11*Math.sin(a+0.4)); ctx.fill();
+  ctx.font='600 12px Archivo, sans-serif'; ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.strokeText(lab,x1+6,y1+4); ctx.fillText(lab,x1+6,y1+4);}
+function overlay(z){
+  const bearing=(b)=>[Math.sin(b*Math.PI/180),-Math.cos(b*Math.PI/180)];
+  let [fx,fy]=bearing(190); arrow(40,22,40+34*fx,22+34*fy,'#0D6379','flight');
+  let [lx,ly]=bearing(280); arrow(110,78,110+44*lx,78+44*ly,'#A9500F','LOS');
+  ctx.font='700 13px Archivo, sans-serif'; ctx.fillStyle='#111'; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=3; ctx.strokeText('N ↑',cv.width-44,22); ctx.fillText('N ↑',cv.width-44,22);
+  const km=z[2]>300?2:0.5, px=km*1000/M.dx*cv.width/z[2]; const x0=cv.width-px-20, y0=cv.height-18;
+  ctx.fillStyle='rgba(255,255,255,.8)'; ctx.fillRect(x0-6,y0-20,px+12,28); ctx.fillStyle='#111'; ctx.fillRect(x0,y0,px,5); ctx.font='12px Archivo, sans-serif'; ctx.fillText(km+' km',x0+px/2-14,y0-6);}
+function draw(){
+  const B=+document.getElementById('bp').value; document.getElementById('bv').textContent=B+' m';
+  const h=ha(); document.getElementById('ha').textContent=isFinite(h)? (h>=10000? (h/1000).toFixed(0)+' km':h.toFixed(0)+' m') : '∞';
+  document.getElementById('nf').textContent=isFinite(h)? (M.dz_max/h).toFixed(2) : '0';
+  if(!data.dz) return;
+  const z=ZOOM[document.getElementById('zoom').value]; cv.width=576; cv.height=Math.round(576*z[3]/z[2]);
+  ctx.imageSmoothingEnabled=z[2]>300; ctx.drawImage(layerCanvas(),z[0],z[1],z[2],z[3],0,0,cv.width,cv.height); overlay(z);
+  document.getElementById('credit').textContent=CREDIT[layer];
+  const lg=document.getElementById('legend');
+  lg.innerHTML= layer==='dz'? '<span class="bar dzbar"></span><span>−100 m</span><span>0</span><span>+100 m</span>' :
+    layer==='sep_coh'? '<span class="bar cohbar"></span><span>0</span><span>0.5</span><span>1</span>' :
+    layer==='shade'? '' : '<span class="bar phbar"></span><span>−π</span><span>0</span><span>+π</span>';
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.l===layer)); drawChart(); }
+cv.addEventListener('mousemove',e=>{ if(!data.dz) return; const r=cv.getBoundingClientRect(), z=ZOOM[document.getElementById('zoom').value];
+  const x=Math.floor(z[0]+(e.clientX-r.left)/r.width*z[2]), y=Math.floor(z[1]+(e.clientY-r.top)/r.height*z[3]); if(x<0||y<0||x>=W||y>=H) return; const i=y*W+x;
+  const dz=data.dz[i], hB=M.chart.B_0902_0914.ha_pred, pred=Math.sign(M.chart.B_0902_0914.bperp)*2*Math.PI*dz/hB; const wrap=v=>Math.atan2(Math.sin(v),Math.cos(v));
+  document.getElementById('probe').innerHTML=`<b>${(M.lat0+ (y+0.5)*M.dlat).toFixed(4)}°N, ${(M.lon0+(x+0.5)*M.dlon).toFixed(4)}°E</b><br>DEM change Δh: <b>${dz.toFixed(1)} m</b><br>September pair: measured ${data.pB[i].toFixed(2)} rad, predicted ${wrap(pred).toFixed(2)} rad<br>coherence ${data.cB[i].toFixed(2)}`; });
+document.getElementById('tabs').addEventListener('click',e=>{ if(e.target.dataset.l){ layer=e.target.dataset.l; draw(); }});
+['zoom','sensor','bp'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ if(id!=='zoom' && layer!=='sim' && id==='bp'){} draw(); }));
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function drawChart(){
+  const c=document.getElementById('chart'), g=c.getContext('2d'); const w=c.width, h=c.height, L=64, R=20, T=20, Bm=48;
+  g.clearRect(0,0,w,h); g.fillStyle=css('--panel'); g.fillRect(0,0,w,h);
+  const x0=-15,x1=110,y0=-5.5,y1=1.5; const X=v=>L+(v-x0)/(x1-x0)*(w-L-R), Y=v=>T+(y1-v)/(y1-y0)*(h-T-Bm);
+  g.strokeStyle=css('--rule'); g.fillStyle=css('--muted'); g.font='12px Archivo, sans-serif'; g.lineWidth=1;
+  for(let v=-5;v<=1;v++){ g.beginPath(); g.moveTo(L,Y(v)); g.lineTo(w-R,Y(v)); g.stroke(); g.fillText(v,L-24,Y(v)+4); }
+  for(let v=0;v<=100;v+=20){ g.beginPath(); g.moveTo(X(v),T); g.lineTo(X(v),h-Bm); g.stroke(); g.fillText(v,X(v)-8,h-Bm+18); }
+  g.fillText('height error of NASADEM, Copernicus minus NASADEM (m)',L+180,h-10);
+  g.save(); g.translate(16,T+170); g.rotate(-Math.PI/2); g.fillText('phase difference (rad)',0,0); g.restore();
+  const S1=SENS.s1, B=+document.getElementById('bp').value;
+  if(B>0){ const hh=S1.lam*S1.R*Math.sin(S1.th*Math.PI/180)/(2*B); g.setLineDash([6,5]); g.strokeStyle=css('--faint'); g.lineWidth=2; g.beginPath(); g.moveTo(X(x0),Y(-2*Math.PI*x0/hh)); g.lineTo(X(x1),Y(-2*Math.PI*x1/hh)); g.stroke(); g.setLineDash([]); }
+  const cols={B_0902_0914:'#C0392B',A_0716_0728:'#1F6FB2'};
+  for(const p of ['B_0902_0914','A_0716_0728']){ const d=M.chart[p], col=cols[p]; g.strokeStyle=col; g.fillStyle=col; g.lineWidth=2;
+    const sg=Math.sign(d.bperp); g.beginPath(); g.moveTo(X(x0),Y(sg*2*Math.PI*x0/d.ha_pred)); g.lineTo(X(x1),Y(sg*2*Math.PI*x1/d.ha_pred)); g.stroke();
+    d.x.forEach((v,i)=>{ g.beginPath(); g.arc(X(v),Y(d.y[i]),4.5,0,2*Math.PI); g.fill(); }); }
+  g.font='600 12.5px Archivo, sans-serif'; g.fillStyle=cols.B_0902_0914; g.fillText('2–14 Sep 2026, B⊥ = −118 m',X(55),Y(-1.2));
+  g.fillStyle=cols.A_0716_0728; g.fillText('16–28 Jul 2026, B⊥ = −1.4 m (control)',X(50),Y(0.45));
+  g.fillStyle=css('--faint'); g.fillText('your slider, B⊥ = '+B+' m',X(2),Y(-5.0));
+  const st=document.getElementById('stats'), a=M.chart.B_0902_0914, b=M.chart.A_0716_0728;
+  st.innerHTML=`<div class="stat"><div class="k">Sep: h<sub>a</sub> measured</div><div class="v">${a.ha_meas.toFixed(0)} m</div></div><div class="stat"><div class="k">Sep: h<sub>a</sub> predicted</div><div class="v">${a.ha_pred.toFixed(0)} m</div></div><div class="stat"><div class="k">crater coherence</div><div class="v">${a.coh_crater.toFixed(2)}</div></div><div class="stat"><div class="k">Jul: h<sub>a</sub> predicted</div><div class="v">${(b.ha_pred/1000).toFixed(0)} km</div></div>`; }
+init();
+</script>
+</body>
+</html>
