@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phasors in a Pixel</title>
+<meta name="description" content="Interactive: the scatterers inside one SAR resolution cell add up as phasors. Move them, shift the viewpoint, let the vegetation move, and watch the pixel value, the interferometric phase and the coherence respond. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --veg:#3C8D2F; --ghost:#9AA5B1; --axis:#B9C3CE;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --veg:#7CC96A; --ghost:#5E6B78; --axis:#34404D;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --veg:#7CC96A; --ghost:#5E6B78; --axis:#34404D;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1040px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block}
+.grid3{display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr); gap:14px}
+.app{display:grid; grid-template-columns:1fr; gap:16px; margin-top:8px}
+.ctl{display:grid; grid-template-columns:1fr 1fr 1.1fr; gap:18px}
+@media (max-width:900px){ .ctl{grid-template-columns:1fr} }
+@media (max-width:900px){ .app{grid-template-columns:1fr} .grid3{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:12px}
+.card h3{margin:0 0 6px; font-size:12px; font-family:"JetBrains Mono",monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:500}
+canvas{width:100%; height:auto; display:block; border-radius:8px; background:var(--panel-2); touch-action:none}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select{font:inherit; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+button.act{font:inherit; font-size:13px; margin:10px 6px 0 0; padding:7px 11px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+button.act:hover{border-color:var(--track)}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+.read{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.stat{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:8px 10px}
+.stat .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:19px; font-weight:600}
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px; color:var(--ink)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:70ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.key{display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Phasors in a pixel</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Phasors in a pixel</h1>
+  <p class="lede">One pixel of a radar image is not one echo. It is the sum of the echoes of every object inside the resolution cell, each an arrow in the complex plane. Move the objects, move the radar, let the leaves stir, and watch why the phase of one image is random while the phase difference of two images is not.</p>
+
+  <h2>The idea in one equation</h2>
+  <p class="serif">Each scatterer <i>k</i> at range <i>R<sub>k</sub></i> returns a phasor of amplitude <i>a<sub>k</sub></i> and phase −4π<i>R<sub>k</sub></i>/λ. The pixel stores their sum,</p>
+  <div class="eq">s = Σ<sub>k</sub> a<sub>k</sub> exp(−j 4π R<sub>k</sub> / λ)</div>
+  <p class="serif">A range difference of a quarter wavelength, 1.4 cm at C band, turns an arrow by half a turn, so the arrows of a cell a few meters wide point every which way. A second pass from a nearby position changes every range by almost the same amount: the whole chain turns as one piece, and the phase of <i>s</i><sub>1</sub><i>s</i><sub>2</sub>* keeps the geometry. If the objects move between the passes, the chain is rebuilt and that phase is lost. The share of the signal that survives is the coherence.</p>
+
+  <h2>Simulator</h2>
+  <div class="app">
+    <div>
+      <div class="grid3">
+        <div class="card"><h3>The cell</h3><canvas id="cell" width="300" height="440"></canvas>
+          <div class="cap">Drag an object. Click one to select it. <span class="key" style="background:var(--track)"></span>rigid <span class="key" style="background:var(--veg)"></span>vegetation</div></div>
+        <div class="card"><h3>Pass 1 and pass 2</h3><canvas id="plane" width="360" height="360"></canvas>
+          <div class="cap">Gray dashed: s₁. Orange: s₂. Thin arrows: the objects of pass 2, head to tail.</div></div>
+        <div class="card"><h3>2,000 cells like this one</h3><canvas id="hist" width="360" height="360"></canvas>
+          <div class="cap">Histogram of the phase of s₁s₂*, over cells with random object positions and the settings below. Dashed: the geometric phase.</div></div>
+      </div>
+    </div>
+    <div class="card ctl"><div>
+      <label for="band">Band</label>
+      <select id="band">
+        <option value="0.0311">X band, 3.1 cm (TerraSAR-X)</option>
+        <option value="0.0555" selected>C band, 5.55 cm (Sentinel-1)</option>
+        <option value="0.242">L band, 24.2 cm (NISAR)</option>
+      </select>
+      <label>Viewpoint shift: geometric phase <span class="val" id="gv"></span></label>
+      <input type="range" id="geo" min="0" max="360" step="5" value="60">
+      <label>Random motion of the moving objects, rms <span class="val" id="mv"></span></label>
+      <input type="range" id="mot" min="0" max="3" step="0.05" value="0">
+      <div class="chk"><input type="checkbox" id="vegonly" checked><label for="vegonly" style="margin:0">only the vegetation moves</label></div>
+      </div><div>
+      <button class="act" id="quarter">Move the selected object by λ/4</button>
+      <button class="act" id="shuffle">New arrangement</button>
+      <button class="act" id="reset">Reset</button>
+      <div class="cap">Model: (1 − f) + f·exp(−8π²σ²/λ²), where f is the share of the power held by the moving objects (Zebker and Villasenor, 1992).</div>
+      </div><div>
+      <div class="read" style="margin-top:0">
+        <div class="stat"><div class="k">|s₁|</div><div class="v" id="r1">–</div></div>
+        <div class="stat"><div class="k">arg s₁</div><div class="v" id="p1">–</div></div>
+        <div class="stat"><div class="k">arg s₁s₂*</div><div class="v" id="pd">–</div></div>
+        <div class="stat"><div class="k">geometric</div><div class="v" id="pg">–</div></div>
+        <div class="stat"><div class="k">coherence, 2,000 cells</div><div class="v" id="cm">–</div></div>
+        <div class="stat"><div class="k">model</div><div class="v" id="ct">–</div></div>
+      </div>
+    </div></div>
+  </div>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>With no motion, drag the geometric phase from 0° to 360°. The chain in the middle panel turns as one piece, its length does not change, and every one of the 2,000 cells agrees on the phase. Why does the phase of s₁ alone tell you nothing, while the phase of s₁s₂* tells you the geometry?</li>
+    <li>Select the roof edge and move it by λ/4. Predict first: by how much does its arrow turn, and does the pixel get brighter or darker? Now do the same with a branch. Why does the brightest object decide most of the answer?</li>
+    <li>Set the motion to 0.5 cm at C band with only the vegetation moving. The histogram spreads, but a peak survives at the geometric phase. What sets the height of that peak? Uncheck the box so that everything moves, and compare.</li>
+    <li>Keep the motion at 1 cm and switch from C band to L band. The same leaves, moving by the same amount, barely matter to NISAR. Find the motion at which L band loses as much coherence as C band did at 0.5 cm, and check it against the ratio of the wavelengths.</li>
+    <li>Press "New arrangement" several times with no motion. The pixel value jumps around (speckle), yet the phase difference stays put. Which of the two is a property of the ground and which of the arrangement?</li>
+  </ol>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, Chapter 6 (Section 6.1, Figure 6.3), after Chapter 2, Figure 2.8. A schematic model: point scatterers in one Sentinel-1-sized cell (2.3 m in slant range by 14 m in azimuth), no noise, no spatial baseline decorrelation. <a href="../insar-height-of-ambiguity/index.html">Height of ambiguity</a> · <a href="../insar-dem-error-kirishima/index.html">Kirishima DEM error</a></p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} draw();};
+
+const CELL_R=2.3, CELL_A=14;               // meters
+const BASE=[ // name, amplitude, range (m), azimuth (m), vegetation?
+  ['roof edge',1.00,0.35,11.5,false],['car',0.75,1.70,4.0,false],['stone',0.45,1.05,8.0,false],
+  ['branch',0.35,0.55,2.0,true],['branch',0.30,1.95,12.5,true],['grass',0.22,1.40,6.0,true],['curb',0.55,2.10,9.5,false]];
+let S=[], sel=0, seed=1, motionDraw=[];
+function rnd(){ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; }
+function gauss(){ let u=0,v=0; while(!u)u=rnd(); v=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function reset(){ S=BASE.map(b=>({name:b[0],a:b[1],r:b[2],y:b[3],veg:b[4]})); sel=0; newMotion(); }
+function newMotion(){ motionDraw=S.map(()=>gauss()); }
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $=id=>document.getElementById(id);
+function params(){ return {lam:+$('band').value, geo:+$('geo').value*Math.PI/180, sig:+$('mot').value/100, vegonly:$('vegonly').checked}; }
+function phasors(p){
+  const k=4*Math.PI/p.lam;
+  const z1=S.map(o=>[o.a*Math.cos(-k*o.r), o.a*Math.sin(-k*o.r)]);
+  const z2=S.map((o,i)=>{ const moves=!p.vegonly||o.veg; const dr=moves? p.sig*motionDraw[i] : 0; const ph=-k*(o.r+dr)-p.geo; return [o.a*Math.cos(ph), o.a*Math.sin(ph)]; });
+  return {z1,z2};
+}
+const sum=z=>z.reduce((s,v)=>[s[0]+v[0],s[1]+v[1]],[0,0]);
+function arrow(ctx,x0,y0,x1,y1,col,w,dash){ ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=w; if(dash)ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); ctx.setLineDash([]);
+  const a=Math.atan2(y1-y0,x1-x0), L=Math.min(9+w*1.5, Math.hypot(x1-x0,y1-y0)*0.5);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1-L*Math.cos(a-0.4),y1-L*Math.sin(a-0.4)); ctx.lineTo(x1-L*Math.cos(a+0.4),y1-L*Math.sin(a+0.4)); ctx.closePath(); ctx.fill(); ctx.restore(); }
+function drawCell(){
+  const c=$('cell'), ctx=c.getContext('2d'), W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
+  const mx=30, my=16, sx=(W-2*mx)/CELL_R, sy=(H-2*my-24)/CELL_A;
+  ctx.strokeStyle=css('--ink'); ctx.lineWidth=1.5; ctx.strokeRect(mx,my,CELL_R*sx,CELL_A*sy);
+  ctx.fillStyle=css('--muted'); ctx.font='13px Archivo, sans-serif';
+  ctx.fillText('slant range →  (2.3 m)', mx, H-8); ctx.save(); ctx.translate(12,my+CELL_A*sy/2+40); ctx.rotate(-Math.PI/2); ctx.fillText('azimuth (14 m)',0,0); ctx.restore();
+  S.forEach((o,i)=>{ const x=mx+o.r*sx, y=my+(CELL_A-o.y)*sy, rad=5+14*o.a;
+    ctx.beginPath(); ctx.arc(x,y,rad,0,2*Math.PI); ctx.fillStyle=o.veg?css('--veg'):css('--track'); ctx.globalAlpha=.85; ctx.fill(); ctx.globalAlpha=1;
+    if(i===sel){ ctx.lineWidth=3; ctx.strokeStyle=css('--los'); ctx.stroke(); }
+    ctx.fillStyle=css('--ink'); ctx.fillText(o.name, Math.min(x+rad+3, W-52), y+4); });
+  c._geo={mx,my,sx,sy};
+}
+function drawPlane(p){
+  const c=$('plane'), ctx=c.getContext('2d'), W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
+  const {z1,z2}=phasors(p), s1=sum(z1), s2=sum(z2), sc=W/2/2.6, cx=W/2, cy=H/2;
+  ctx.strokeStyle=css('--axis'); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+  ctx.fillStyle=css('--faint'); ctx.font='13px Archivo, sans-serif'; ctx.fillText('real',W-28,cy-6); ctx.fillText('imag',cx+6,12);
+  arrow(ctx,cx,cy,cx+s1[0]*sc,cy-s1[1]*sc,css('--ghost'),2.5,[6,5]);
+  let px=0,py=0; z2.forEach((v,i)=>{ arrow(ctx,cx+px*sc,cy-py*sc,cx+(px+v[0])*sc,cy-(py+v[1])*sc,S[i].veg?css('--veg'):css('--track'),i===sel?2.6:1.5); px+=v[0]; py+=v[1]; });
+  arrow(ctx,cx,cy,cx+s2[0]*sc,cy-s2[1]*sc,css('--los'),3.2);
+  ctx.fillStyle=css('--muted'); ctx.fillText('s₁',cx+s1[0]*sc*1.06+4,cy-s1[1]*sc*1.06); ctx.fillStyle=css('--los'); ctx.fillText('s₂',cx+s2[0]*sc*1.06+4,cy-s2[1]*sc*1.06);
+  return {s1,s2};
+}
+function simulate(p){
+  const n=2000, k=4*Math.PI/p.lam, N=S.length; let re=0,im=0,p1=0,p2=0; const ph=new Float32Array(n); let sd=12345;
+  const r=()=>{ sd=(sd*16807)%2147483647; return (sd-1)/2147483646; };
+  const g=()=>{ let u=0; while(!u)u=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r()); };
+  for(let c=0;c<n;c++){ let a1=0,b1=0,a2=0,b2=0;
+    for(let i=0;i<N;i++){ const o=S[i], R=r()*CELL_R, moves=!p.vegonly||o.veg, dr=moves? p.sig*g():0;
+      const q1=-k*R, q2=-k*(R+dr)-p.geo; a1+=o.a*Math.cos(q1); b1+=o.a*Math.sin(q1); a2+=o.a*Math.cos(q2); b2+=o.a*Math.sin(q2); }
+    const x=a1*a2+b1*b2, y=b1*a2-a1*b2; ph[c]=Math.atan2(y,x); re+=x; im+=y; p1+=a1*a1+b1*b1; p2+=a2*a2+b2*b2; }
+  return {ph, coh:Math.hypot(re,im)/Math.sqrt(p1*p2)};
+}
+function drawHist(p){
+  const c=$('hist'), ctx=c.getContext('2d'), W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
+  const {ph,coh}=simulate(p), nb=72, h=new Array(nb).fill(0);
+  ph.forEach(v=>{ let b=Math.floor((v+Math.PI)/(2*Math.PI)*nb); h[Math.min(nb-1,Math.max(0,b))]++; });
+  const mx=34, my=12, pw=W-mx-8, pht=H-my-34, hm=Math.max(...h,1);
+  ctx.strokeStyle=css('--axis'); ctx.strokeRect(mx,my,pw,pht);
+  ctx.fillStyle=css('--track'); h.forEach((v,i)=>{ const bh=v/hm*pht; ctx.fillRect(mx+i*pw/nb, my+pht-bh, pw/nb-1, bh); });
+  let gp=((p.geo+Math.PI)%(2*Math.PI))-Math.PI; const gx=mx+(gp+Math.PI)/(2*Math.PI)*pw;
+  ctx.strokeStyle=css('--los'); ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(gx,my); ctx.lineTo(gx,my+pht); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css('--muted'); ctx.font='13px Archivo, sans-serif';
+  ['−180°','0°','180°'].forEach((t,i)=>ctx.fillText(t, mx+i*pw/2-(i===2?30:(i?8:0)), my+pht+14)); ctx.fillText('phase of s₁s₂*', mx+pw/2-40, H-4);
+  return coh;
+}
+const deg=v=>(v*180/Math.PI).toFixed(0)+'°';
+function draw(){
+  const p=params();
+  $('gv').textContent=$('geo').value+'°'; $('mv').textContent=(+$('mot').value).toFixed(2)+' cm';
+  drawCell(); const {s1,s2}=drawPlane(p); const coh=drawHist(p);
+  const pd=Math.atan2(s1[1]*s2[0]-s1[0]*s2[1], s1[0]*s2[0]+s1[1]*s2[1]);
+  $('r1').textContent=Math.hypot(...s1).toFixed(2); $('p1').textContent=deg(Math.atan2(s1[1],s1[0]));
+  $('pd').textContent=deg(pd); let g=+$('geo').value; if(g>180)g-=360; $('pg').textContent=g+'°';
+  $('cm').textContent=coh.toFixed(2);
+  const Ptot=S.reduce((s,o)=>s+o.a*o.a,0), Pm=S.reduce((s,o)=>s+((!p.vegonly||o.veg)?o.a*o.a:0),0), f=Pm/Ptot;
+  $('ct').textContent=((1-f)+f*Math.exp(-8*Math.PI*Math.PI*p.sig*p.sig/(p.lam*p.lam))).toFixed(2);
+}
+// interaction
+(function(){ const c=$('cell'); let drag=false;
+  const pos=e=>{ const r=c.getBoundingClientRect(); return [(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]; };
+  c.addEventListener('pointerdown',e=>{ const [x,y]=pos(e), g=c._geo; let best=-1,bd=1e9;
+    S.forEach((o,i)=>{ const d=Math.hypot(g.mx+o.r*g.sx-x, g.my+(CELL_A-o.y)*g.sy-y); if(d<bd){bd=d;best=i;} });
+    if(bd<30){ sel=best; drag=true; c.setPointerCapture(e.pointerId); draw(); } });
+  c.addEventListener('pointermove',e=>{ if(!drag)return; const [x,y]=pos(e), g=c._geo, o=S[sel];
+    o.r=Math.min(CELL_R,Math.max(0,(x-g.mx)/g.sx)); o.y=Math.min(CELL_A,Math.max(0,CELL_A-(y-g.my)/g.sy)); draw(); });
+  c.addEventListener('pointerup',()=>{drag=false;});
+})();
+$('quarter').onclick=()=>{ const o=S[sel], q=+$('band').value/4; o.r = (o.r+q<=CELL_R)? o.r+q : o.r-q; draw(); };  // ±λ/4 both turn the arrow by 180°
+$('shuffle').onclick=()=>{ S.forEach(o=>{ o.r=rnd()*CELL_R; o.y=rnd()*CELL_A; }); newMotion(); draw(); };
+$('reset').onclick=()=>{ reset(); $('geo').value=60; $('mot').value=0; $('band').value='0.0555'; $('vegonly').checked=true; draw(); };
+['band','geo','mot','vegonly'].forEach(id=>$(id).addEventListener('input',draw));
+reset(); draw();
+</script>
+</body>
+</html>
