@@ -65,6 +65,23 @@ button.act:hover{border-color:var(--track)}
 ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:70ch}
 .foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
 .key{display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; vertical-align:middle}
+
+.tabwrap{overflow-x:auto; margin:12px 0}
+table.tab{border-collapse:collapse; font-size:14px; min-width:min(100%,560px)}
+table.tab th,table.tab td{border-bottom:1px solid var(--rule-soft); padding:6px 12px; text-align:right; white-space:nowrap}
+table.tab th{font-size:12px; color:var(--muted); font-weight:600}
+table.objs td:nth-child(2),table.objs th:nth-child(2){text-align:left}
+.nw{white-space:nowrap}
+table.tab td:first-child,table.tab th:first-child{text-align:left}
+table.tab tr.sum td{border-top:1.5px solid var(--ink); border-bottom:none; font-weight:600}
+ol.steps{padding-left:22px; margin:6px 0}
+ol.steps>li{margin:22px 0; max-width:74ch}
+ol.steps>li>b{font-size:16px}
+.doit{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--track); border-radius:8px; padding:9px 13px; margin:12px 0; font-size:14.5px; max-width:70ch}
+.doit .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--track); margin-bottom:3px}
+dl.ctrl{margin:8px 0}
+dl.ctrl dt{font-weight:600; margin-top:18px; font-size:15px}
+dl.ctrl dd{margin:4px 0 0; max-width:70ch; font-family:Newsreader,Georgia,serif; font-size:16.5px}
 </style>
 </head>
 <body>
@@ -106,6 +123,7 @@ ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; 
       <input type="range" id="mot" min="0" max="3" step="0.05" value="0">
       <div class="chk"><input type="checkbox" id="vegonly" checked><label for="vegonly" style="margin:0">only the vegetation moves</label></div>
       </div><div>
+      <button class="act" id="card">Load the class exercise</button>
       <button class="act" id="quarter">Move the selected object by λ/4</button>
       <button class="act" id="shuffle">New arrangement</button>
       <button class="act" id="reset">Reset</button>
@@ -122,6 +140,78 @@ ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; 
     </div></div>
   </div>
 
+
+  <h2>The class exercise, step by step</h2>
+  <p class="serif">The Session 13 phasor card (6 October, two minutes in teams) works one resolution cell by hand. The button <b>Load the class exercise</b> places the card's five scatterers in the simulator at C band, with no viewpoint shift and no motion, so that each step below can be checked on screen.</p>
+  <ol class="steps">
+    <li><b>Add the five arrows head to tail.</b>
+      <p class="serif">Each scatterer returns an arrow whose length is its amplitude <i>a</i> and whose angle is its phase φ. Arrows add by placing the tail of each on the head of the previous one, starting at the origin; the arrow from the origin to the last head is the pixel value <i>s</i>, and the order of the arrows does not change it. In numbers, the real parts and the imaginary parts add separately:</p>
+      <div class="tabwrap"><table class="tab">
+        <tr><th>Scatterer</th><th>Amplitude <i>a</i></th><th>Phase φ</th><th>Real part <i>a</i> cos φ</th><th>Imaginary part <i>a</i> sin φ</th></tr>
+        <tr><td>1</td><td>1.0</td><td>30°</td><td>0.866</td><td>0.500</td></tr>
+        <tr><td>2</td><td>0.8</td><td>150°</td><td>−0.693</td><td>0.400</td></tr>
+        <tr><td>3</td><td>0.6</td><td>90°</td><td>0.000</td><td>0.600</td></tr>
+        <tr><td>4</td><td>0.5</td><td>270°</td><td>0.000</td><td>−0.500</td></tr>
+        <tr><td>5</td><td>0.4</td><td>0°</td><td>0.400</td><td>0.000</td></tr>
+        <tr class="sum"><td>Sum s</td><td></td><td></td><td>0.573</td><td>1.000</td></tr>
+      </table></div>
+      <p class="serif">The pixel has length √(0.573² + 1.000²) = 1.15 and phase atan2(1.000, 0.573) = 60°. The five arrows are 3.3 long in total, yet the pixel is only 1.15 long, because arrows that point in different directions partly cancel.</p>
+      <div class="doit"><span class="k">On the page</span>Press Load the class exercise. With no viewpoint shift the two passes are identical: the thin arrows in the middle panel are the card's five arrows head to tail, and the orange arrow, drawn over the dashed s₁, is their sum. The readouts show |s₁| = 1.15 and arg s₁ = 60°.</div>
+    </li>
+    <li><b>Move scatterer 3 away from the radar by a quarter wavelength.</b>
+      <p class="serif">A displacement of λ/4 (1.39 cm at C band, where λ = 5.55 cm) lengthens the round trip by λ/2, so the phase of scatterer 3 changes by −4π(λ/4)/λ = −π: its arrow turns by half a turn, from 90° to 270°. Its imaginary part goes from +0.6 to −0.6, the imaginary part of the sum drops by 1.2, and the pixel becomes s = (0.573, −0.200), of length 0.61 and phase −19°. The pixel gets darker: its intensity |s|² falls from 1.33 to 0.37, a factor of 3.6, although only one object out of five moved, by 1.4 cm, in a cell 2.3 m wide.</p>
+      <div class="doit"><span class="k">On the page</span>Scatterer 3 is selected after loading (orange ring). Press Move the selected object by λ/4: its arrow flips in the middle panel and |s₁| drops to 0.61.</div>
+      <p class="serif">The phase of a single image is set by the arrangement of the scatterers at the centimeter scale, which is never known. That is why it looks random.</p>
+    </li>
+    <li><b>Observe the same cell from a slightly different position.</b>
+      <p class="serif">Load the exercise again to undo step 2. On a second pass from a slightly farther position, every range in the cell grows by the same amount, here 0.46 cm (one sixth of λ/2), so every arrow turns by the same 60°. Turning all the arrows by one angle turns their sum by that angle, Σ<sub>k</sub> a<sub>k</sub> e<sup>j(φ<sub>k</sub> − 60°)</sup> = e<sup>−j60°</sup> Σ<sub>k</sub> a<sub>k</sub> e<sup>jφ<sub>k</sub></sup>: the chain rotates as one piece. Its length stays 1.15, the phase of s₂ is 60° − 60° = 0°, and the phase of s₁s₂* is +60°. No redrawing is needed, and the answer is the same for any arrangement of the five scatterers.</p>
+      <div class="doit"><span class="k">On the page</span>Set the viewpoint shift to 60°. The orange s₂ has the length of the dashed s₁ and is turned by 60°, and arg s₁s₂* reads 60°. Press New arrangement several times: |s₁| and arg s₁ change every time, arg s₁s₂* stays at 60°, and all 2,000 cells of the histogram agree.</div>
+      <p class="serif">The phase of one image belongs to the arrangement; the phase difference of two images belongs to the geometry, provided the arrangement stays the same between the passes (Chapter 6, Section 6.1).</p>
+    </li>
+    <li><b>Beyond the card: let the scatterers move.</b>
+      <p class="serif">Press Reset to return to the default cell (a roof edge, a car, a curb, a stone, two branches and grass). With 0.5 cm of random motion at C band and only the vegetation moving, the coherence stays near 0.95, because the vegetation holds only 11% of the pixel's power. Unchecking the box lets everything move, and the coherence falls to about 0.5 (the model readout gives 0.53). At L band the same motion leaves about 0.97: the Zebker–Villasenor factor exp(−8π²σ²/λ²) depends on the motion measured in wavelengths (Chapter 6, Section 6.5).</p>
+    </li>
+  </ol>
+
+  <h2>What each object and each control does</h2>
+  <p class="serif">The left panel is one Sentinel-1 resolution cell, 2.3 m in slant range (left to right, the direction in which the radar looks) by 14 m in azimuth (bottom to top, the direction in which the satellite flies). Each circle is a point scatterer. The default cell holds seven:</p>
+  <div class="tabwrap"><table class="tab objs">
+    <tr><th>Object</th><th>Type</th><th>Amplitude <i>a</i></th><th>Share of the power</th></tr>
+    <tr><td>roof edge</td><td>rigid</td><td>1.00</td><td>43%</td></tr>
+    <tr><td>car</td><td>rigid</td><td>0.75</td><td>24%</td></tr>
+    <tr><td>curb</td><td>rigid</td><td>0.55</td><td>13%</td></tr>
+    <tr><td>stone</td><td>rigid</td><td>0.45</td><td>9%</td></tr>
+    <tr><td>branch</td><td>vegetation</td><td>0.35</td><td>5%</td></tr>
+    <tr><td>branch</td><td>vegetation</td><td>0.30</td><td>4%</td></tr>
+    <tr><td>grass</td><td>vegetation</td><td>0.22</td><td>2%</td></tr>
+  </table></div>
+  <p class="serif">The share of the power is a<sub>k</sub>²/Σ a<sub>k</sub>², the fraction of the pixel's mean intensity that the object contributes.</p>
+  <dl class="ctrl">
+    <dt>Size and color of a circle</dt>
+    <dd>The size is the amplitude, which is the length of the object's arrow; the color says whether the object can move between the passes (blue: rigid; green: vegetation). Amplitudes are fixed. The roof edge alone holds 43% of the power, so it dominates the pixel.</dd>
+    <dt>Dragging an object left or right (slant range)</dt>
+    <dd>This is the only change that alters an object's phase, φ<sub>k</sub> = −4πR<sub>k</sub>/λ, where R<sub>k</sub> is its distance from the radar. A move of ΔR turns its arrow by −4πΔR/λ and leaves the arrow's length unchanged: half a turn for λ/4 (1.39 cm at C band, 6.05 cm at L band) and a full turn, back to the same direction, for λ/2. A one-pixel nudge on screen moves the object by about 1 cm, which turns its arrow by about 130° at C band, 30° at L band and 230° at X band, so at C band the arrow jumps from one direction to another under the mouse. The button Move the selected object by λ/4 gives a controlled move.</dd>
+    <dt>Dragging an object up or down (azimuth)</dt>
+    <dd>Nothing changes: not the arrows, not the pixel, not the readouts. The radar measures distance along its line of sight, and in a focused image the line of sight is perpendicular to the flight direction, so sliding an object along the track leaves its distance unchanged; a 1 cm slide changes the range by less than 10<sup>−10</sup> m. The page also gives every object the same weight wherever it sits in the cell, which is a simplification: in a real image an object near the edge of the cell contributes a little less, through the impulse response of Chapter 4.</dd>
+    <dt>Clicking an object</dt>
+    <dd>Selects it: an orange ring marks it, its arrow is drawn thicker in the middle panel, and the λ/4 button acts on it.</dd>
+    <dt>Move the selected object by λ/4</dt>
+    <dd>Moves the selected object a quarter wavelength farther in range, or nearer if it would leave the cell; either way its arrow z<sub>k</sub> turns by exactly 180°, and the pixel becomes s − 2z<sub>k</sub>. Whether it gets darker or brighter depends on how that arrow lines up with the sum.</dd>
+    <dt>Band</dt>
+    <dd>Sets the wavelength for every object: X band (TerraSAR-X, 3.1 cm), C band (Sentinel-1, 5.55 cm) or L band (NISAR, 24.2 cm). The objects stay where they are, but their phases change, because the phase counts range in units of λ/2. The same motion also costs less coherence at a longer wavelength.</dd>
+    <dt>Viewpoint shift (geometric phase)</dt>
+    <dd>How much farther the cell is from the second position than from the first, expressed as a phase. Every arrow of pass 2 turns by this same angle, so the chain rotates without changing shape: s₂ has the length of s₁, and arg s₁s₂* equals the slider value. In a real pair this is the flat-Earth and topographic phase of the pixel (Chapter 6, Sections 6.2 and 6.3). The page applies exactly the same shift to every object in the cell, so it shows no geometric decorrelation (Section 6.5).</dd>
+    <dt>Random motion of the moving objects, rms</dt>
+    <dd>Between the passes, every object allowed to move gets its own random change of range, drawn from a Gaussian with this root-mean-square value; only pass 2 is affected. Because the changes differ from object to object, the chain changes shape instead of rotating: s₂ gets a different length and phase, and in the histogram the 2,000 cells spread around the geometric phase. Each object keeps its random draw until New arrangement is pressed, so moving the slider scales one pattern of motion.</dd>
+    <dt>Only the vegetation moves</dt>
+    <dd>Checked, only the green objects move; unchecked, all seven do.</dd>
+    <dt>New arrangement, Reset and Load the class exercise</dt>
+    <dd>New arrangement puts every object at a random place in the cell and draws new motions; with no motion, |s₁| and arg s₁ jump from one arrangement to the next (speckle) while arg s₁s₂* stays at the geometric phase. Reset restores the default cell at C band, with a 60° viewpoint shift and no motion. Load the class exercise loads the five scatterers of the Session 13 card, with no viewpoint shift and scatterer 3 selected.</dd>
+    <dt>The panels and the readouts</dt>
+    <dd>The middle panel shows s₁, the pixel on pass 1 (dashed gray), the arrows of pass 2 head to tail (thin, colored by type) and their sum s₂ (orange). The right panel repeats the experiment on 2,000 cells that hold the same objects at random places and shows the histogram of the phase of s₁s₂*, with the geometric phase dashed. |s₁| and arg s₁ are the amplitude and the phase of the pixel on pass 1; arg s₁s₂* is the interferometric phase of the cell; geometric is the slider value. The coherence over 2,000 cells is <span class="nw">|Σ s₁s₂*| / √(Σ|s₁|² Σ|s₂|²)</span>, the estimator of Chapter 6, Section 6.4, applied to an ensemble of cells instead of a window of pixels. The model is <span class="nw">(1 − f) + f·exp(−8π²σ²/λ²)</span>, where f is the share of the power held by the moving objects: 11% in the default cell when only the vegetation moves, 100% when everything moves. The rigid objects keep their share of the power, and the moving ones keep theirs only in proportion to the Zebker–Villasenor factor.</dd>
+  </dl>
+  <p class="serif">The model leaves out thermal noise, the shape of the impulse response and decorrelation from the baseline itself, and it applies motion directly as a change of range; Chapter 6, Sections 6.4 and 6.5, treat each effect.</p>
+
   <h2>Try this</h2>
   <ol class="try">
     <li>With no motion, drag the geometric phase from 0° to 360°. The chain in the middle panel turns as one piece, its length does not change, and every one of the 2,000 cells agrees on the phase. Why does the phase of s₁ alone tell you nothing, while the phase of s₁s₂* tells you the geometry?</li>
@@ -131,7 +221,7 @@ ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; 
     <li>Press "New arrangement" several times with no motion. The pixel value jumps around (speckle), yet the phase difference stays put. Which of the two is a property of the ground and which of the arrangement?</li>
   </ol>
 
-  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, Chapter 6 (Section 6.1, Figure 6.3), after Chapter 2, Figure 2.8. A schematic model: point scatterers in one Sentinel-1-sized cell (2.3 m in slant range by 14 m in azimuth), no noise, no spatial baseline decorrelation. <a href="../insar-height-of-ambiguity/index.html">Height of ambiguity</a> · <a href="../insar-dem-error-kirishima/index.html">Kirishima DEM error</a></p>
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, Chapter 6 (Section 6.1, Figure 6.3), after Chapter 2, Figure 2.8, and for the Session 13 phasor card. A schematic model: point scatterers in one Sentinel-1-sized cell (2.3 m in slant range by 14 m in azimuth), no noise, no spatial baseline decorrelation. <a href="../insar-height-of-ambiguity/index.html">Height of ambiguity</a> · <a href="../insar-dem-error-kirishima/index.html">Kirishima DEM error</a></p>
 </div>
 <script>
 (function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
@@ -169,7 +259,7 @@ function drawCell(){
   S.forEach((o,i)=>{ const x=mx+o.r*sx, y=my+(CELL_A-o.y)*sy, rad=5+14*o.a;
     ctx.beginPath(); ctx.arc(x,y,rad,0,2*Math.PI); ctx.fillStyle=o.veg?css('--veg'):css('--track'); ctx.globalAlpha=.85; ctx.fill(); ctx.globalAlpha=1;
     if(i===sel){ ctx.lineWidth=3; ctx.strokeStyle=css('--los'); ctx.stroke(); }
-    ctx.fillStyle=css('--ink'); ctx.fillText(o.name, Math.min(x+rad+3, W-52), y+4); });
+    ctx.fillStyle=css('--ink'); const tw=ctx.measureText(o.name).width; ctx.fillText(o.name, (x+rad+3+tw<=W-2)? x+rad+3 : x-rad-3-tw, y+4); });
   c._geo={mx,my,sx,sy};
 }
 function drawPlane(p){
@@ -231,6 +321,13 @@ function draw(){
 $('quarter').onclick=()=>{ const o=S[sel], q=+$('band').value/4; o.r = (o.r+q<=CELL_R)? o.r+q : o.r-q; draw(); };  // ±λ/4 both turn the arrow by 180°
 $('shuffle').onclick=()=>{ S.forEach(o=>{ o.r=rnd()*CELL_R; o.y=rnd()*CELL_A; }); newMotion(); draw(); };
 $('reset').onclick=()=>{ reset(); $('geo').value=60; $('mot').value=0; $('band').value='0.0555'; $('vegonly').checked=true; draw(); };
+// the Session 13 phasor card: amplitude, phase (deg) at C band, nominal range (m), azimuth (m)
+const CARD=[[1.0,30,0.30,2.5],[0.8,150,0.75,5.0],[0.6,90,1.20,7.5],[0.5,270,1.65,10.0],[0.4,0,2.05,12.5]];
+function loadCard(){ const lam=0.0555, half=lam/2;
+  $('band').value='0.0555'; $('geo').value=0; $('mot').value=0; $('vegonly').checked=true;
+  S=CARD.map((c,i)=>{ const frac=(((-c[1]/360)%1)+1)%1; return {name:'scatterer '+(i+1), a:c[0], r:Math.floor(c[2]/half)*half+frac*half, y:c[3], veg:false}; });
+  sel=2; newMotion(); draw(); }
+$('card').onclick=loadCard;
 ['band','geo','mot','vegonly'].forEach(id=>$(id).addEventListener('input',draw));
 reset(); draw();
 </script>
