@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clouds vs Radar</title>
+<meta name="description" content="Interactive: how often Sentinel-2 saw 52 cities under a clear sky from 2023 to 2025, on a globe or a map of ERA5 cloud cover, month by month. NISAR repeats every 12 days and clouds do not stop it. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<script>(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();</script>
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --track-soft:#D6EAF0; --los-soft:#F4E4D6;
+  --stage-a:#FBFCFD; --stage-b:#E4E9EF; --ser-a:#00779A; --ser-b:#A9500F;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A; --los-soft:#3A2A14;
+  --stage-a:#1B2530; --stage-b:#10161D; --ser-a:#2E9EBB; --ser-b:#D07F24;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --track-soft:#12303A; --los-soft:#3A2A14;
+  --stage-a:#1B2530; --stage-b:#10161D; --ser-a:#2E9EBB; --ser-b:#D07F24;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1120px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+button,input,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--track); outline-offset:2px}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; line-height:1.15; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule); font-weight:500}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1)}
+
+.app{display:grid; grid-template-columns:minmax(0,1.72fr) minmax(0,1fr); grid-template-rows:auto 1fr; grid-template-areas:"viewer panel" "rank panel"; gap:0 16px; align-items:start; margin-top:22px}
+.viewer{grid-area:viewer; overflow:hidden; min-width:0}
+.ranksec{grid-area:rank; min-width:0}
+.ranksec h2{margin-top:26px}
+.stage{position:relative; height:clamp(380px,64vh,600px); overflow:hidden; background:radial-gradient(ellipse at 50% 42%,var(--stage-a),var(--stage-b))}
+.stage canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block}
+#ov{touch-action:none; cursor:grab}
+#ov.grabbing{cursor:grabbing}
+#ov.onCity{cursor:pointer}
+#ov:focus-visible{outline-offset:-3px}
+
+.vt{position:absolute; left:12px; top:12px; display:inline-grid; grid-template-columns:1fr 1fr; padding:3px; margin:0; background:var(--panel); border:1px solid var(--rule); border-radius:10px; box-shadow:var(--shadow-1); cursor:pointer; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.03em; isolation:isolate}
+.vt span{position:relative; z-index:1; padding:7px 12px; text-align:center; white-space:nowrap; color:var(--muted); transition:color .25s}
+.vt i{position:absolute; z-index:0; left:3px; top:3px; bottom:3px; width:calc(50% - 3px); border-radius:7px; background:var(--track); transition:transform .45s cubic-bezier(.65,0,.35,1)}
+.vt[aria-checked="true"] i{transform:translateX(100%)}
+.vt[aria-checked="false"] span:nth-of-type(1), .vt[aria-checked="true"] span:nth-of-type(2){color:var(--panel)}
+.vt:hover{border-color:var(--track)}
+
+.zoom{position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:4px}
+.zoom button{width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--rule); background:var(--panel); color:var(--ink); cursor:pointer; font-family:"JetBrains Mono",monospace; font-size:16px; line-height:1; padding:0; box-shadow:var(--shadow-1)}
+.zoom button.fit{font-size:9.5px; letter-spacing:.04em; text-transform:uppercase}
+.zoom button:hover{border-color:var(--track)}
+.hint{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 70px); font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.02em; color:var(--muted); background:var(--panel); border:1px solid var(--rule-soft); border-radius:7px; padding:4px 8px; transition:opacity .5s; pointer-events:none}
+.hint.off{opacity:0}
+.msg{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:80%; text-align:center; font-size:14px; color:var(--muted)}
+
+.months{display:grid; grid-template-columns:62px 62px repeat(12,minmax(0,1fr)); gap:4px; padding:10px 10px 4px; border-top:1px solid var(--rule-soft)}
+.months button,.seg button{min-height:34px; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.01em; padding:4px 0; background:var(--panel-2); color:var(--muted); border:1px solid var(--rule-soft); border-radius:7px; cursor:pointer}
+.months button:hover,.seg button:hover{border-color:var(--track)}
+.months button.on,.seg button.on{background:var(--track); color:var(--panel); border-color:var(--track)}
+.months #play{color:var(--ink); border-color:var(--rule)}
+.months #play.on{background:var(--los); color:var(--panel); border-color:var(--los)}
+.legends{display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; padding:8px 12px 12px}
+.lgt{font-size:11.5px; color:var(--muted); line-height:1.3; min-height:2.6em}
+.ramp{height:9px; border-radius:3px; margin-top:4px; border:1px solid var(--rule)}
+.lgs{display:flex; justify-content:space-between; font-family:"JetBrains Mono",monospace; font-size:9.5px; color:var(--faint); margin-top:2px}
+
+.panel{grid-area:panel; padding:14px; min-width:0}
+.pick{display:grid; grid-template-columns:1.15fr 1fr; gap:10px}
+label.k,.k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:block}
+.combo{position:relative; margin-top:4px}
+.combo input,.pick select{width:100%; height:36px; padding:0 9px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); font-size:14px}
+.pick select{margin-top:4px}
+.combo ul{position:absolute; z-index:30; left:0; right:0; top:calc(100% + 3px); margin:0; padding:3px; list-style:none; max-height:250px; overflow-y:auto; background:var(--panel); border:1px solid var(--rule); border-radius:8px; box-shadow:var(--shadow-1)}
+.combo li{padding:7px 8px; border-radius:5px; font-size:14px; cursor:pointer; display:flex; justify-content:space-between; gap:8px}
+.combo li small{color:var(--faint); font-size:11px}
+.combo li.active,.combo li:hover{background:var(--track-soft)}
+.combo li.none{color:var(--muted); cursor:default; background:none}
+.thr{margin-top:12px}
+.thr p{margin:0 0 5px; font-size:12.5px; color:var(--muted); line-height:1.35}
+.seg{display:grid; grid-template-columns:repeat(3,1fr); gap:4px}
+
+.vs{margin-top:14px}
+.vshead,.vsvals{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.vs.solo .vshead,.vs.solo .vsvals{grid-template-columns:1fr}
+.vshead b{display:block; font-size:18px; letter-spacing:-.01em; line-height:1.2}
+.vshead small{font-size:11.5px; color:var(--muted)}
+.sw{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:1px}
+.sw.a{background:var(--ser-a)} .sw.b{background:var(--ser-b)}
+.row{border-top:1px solid var(--rule-soft); padding:8px 0 7px; margin-top:8px}
+.vshead+.row{margin-top:10px}
+.vsvals .v{font-size:21px; font-weight:600; line-height:1.2}
+.vsvals .v small{font-size:12px; font-weight:400; color:var(--muted)}
+.vsvals .sub{font-size:12px; color:var(--muted); line-height:1.35; margin-top:2px}
+.vsvals .note{font-size:11.5px; color:var(--faint); font-style:italic; line-height:1.3; margin-top:2px}
+.note1{font-size:12.5px; color:var(--muted); margin:6px 0 0}
+
+.chartwrap{border-top:1px solid var(--rule-soft); margin-top:8px; padding-top:8px}
+.chartkey{display:flex; flex-wrap:wrap; gap:2px 12px; font-size:12px; color:var(--muted); margin-top:3px}
+svg.bars{display:block; width:100%; height:auto; margin-top:4px}
+svg.bars text{font-family:"JetBrains Mono",monospace; font-size:8.5px; fill:var(--faint)}
+svg.bars text.on{fill:var(--ink); font-weight:700}
+svg.bars .grid{stroke:var(--rule-soft); stroke-width:1}
+svg.bars .band{fill:var(--panel-2); stroke:var(--rule); stroke-width:.75}
+svg.bars .a{fill:var(--ser-a)} svg.bars .b{fill:var(--ser-b)}
+svg.bars .hit{fill:transparent; cursor:pointer}
+svg.bars .hit:hover{fill:var(--ink); fill-opacity:.05}
+svg.bars .hit:focus-visible{outline:none; stroke:var(--track); stroke-width:1.5}
+.readout{font-size:13px; line-height:1.35; min-height:2.7em; margin-top:2px}
+details.tbl{margin-top:4px; font-size:12.5px; color:var(--muted)}
+details.tbl summary{cursor:pointer; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase}
+details.tbl table{border-collapse:collapse; width:100%; margin-top:6px; font-variant-numeric:tabular-nums}
+details.tbl th,details.tbl td{border-bottom:1px solid var(--rule-soft); padding:3px 6px; text-align:right; font-weight:400; color:var(--ink)}
+details.tbl th{color:var(--muted); font-size:11.5px}
+details.tbl th:first-child,details.tbl td:first-child{text-align:left}
+.radar{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--track); border-radius:8px; padding:9px 12px; margin-top:12px; font-size:14px; line-height:1.4}
+.radar .k{color:var(--track); margin-bottom:2px}
+
+.rankcap{font-size:13px; color:var(--muted); margin:0 0 10px; max-width:none}
+ol.rank{list-style:none; margin:0; padding:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-flow:column; column-gap:22px}
+.rankrow{width:100%; display:grid; grid-template-columns:24px minmax(108px,1fr) minmax(30px,84px) 46px; gap:8px; align-items:center; text-align:left; background:none; border:none; border-radius:6px; padding:5px 6px; cursor:pointer; min-height:32px; font-size:14px}
+.rankrow:hover{background:var(--panel-2)}
+.rankrow.sel{background:var(--track-soft)}
+.rankrow.cmp{background:var(--los-soft)}
+.rankrow .no{font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--faint); text-align:right}
+.rankrow .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rankrow .tr{display:block; height:5px; border-radius:3px; background:var(--rule-soft); overflow:hidden}
+.rankrow .tr i{display:block; height:100%; background:var(--track); border-radius:3px}
+.rankrow .pc{font-family:"JetBrains Mono",monospace; font-size:12px; text-align:right; font-variant-numeric:tabular-nums}
+.rankfoot{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:0 16px 12px}
+button.act{font:inherit; font-size:13px; padding:7px 11px; min-height:34px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+button.act:hover{border-color:var(--track)}
+
+ol.try{padding-left:22px; margin:6px 0}
+ol.try li{margin:14px 0; font-family:Newsreader,Georgia,serif; font-size:17px; max-width:74ch}
+ol.try .btns{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+ul.lim{padding-left:20px; margin:8px 0}
+ul.lim li{margin:6px 0; font-family:Newsreader,Georgia,serif; font-size:17px; max-width:72ch}
+.foot{margin-top:34px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.foot p{max-width:90ch; margin:5px 0}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+@media (max-width:980px){
+  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:none; grid-template-areas:"viewer" "panel" "rank"; row-gap:14px}
+  .stage{height:min(94vw,66vh); min-height:320px}
+}
+@media (max-width:620px){
+  h1{font-size:28px}
+  .lede{font-size:18px}
+  .months{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .months #play,.months button[data-m="0"]{grid-column:span 3}
+  .legends{grid-template-columns:1fr}
+  .lgt{min-height:0}
+  ol.rank{grid-template-columns:minmax(0,1fr); grid-auto-flow:row; grid-template-rows:none !important}
+  .hint{font-size:9.5px}
+  .vt{font-size:10.5px}
+  .vt span{padding:7px 10px}
+}
+@media (prefers-reduced-motion: reduce){ .vt i,.vt span,.hint{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Clouds vs radar</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Clouds over the world's cities</h1>
+  <p class="lede">An optical satellite sees the ground only under a clear sky. This page counts how often Sentinel-2 had one over 52 cities from 2023 to 2025. Radar satellites send their own microwaves, and clouds do not stop them. The page accompanies the post Radar, Explained #1.</p>
+
+  <div class="app">
+    <section class="viewer card" id="viewer" aria-label="World view of cloud cover">
+      <div class="stage" id="stage">
+        <canvas id="gl" aria-hidden="true"></canvas>
+        <canvas id="ov" tabindex="0" role="application" aria-label="World view with 52 city markers. Arrow keys rotate the globe or pan the map. Plus and minus keys zoom. The city search beside this view selects a city."></canvas>
+        <button class="vt" id="vt" role="switch" aria-checked="false" aria-label="2D map view"><i></i><span>3D globe</span><span>2D map</span></button>
+        <div class="hint" id="hint"></div>
+        <div class="zoom">
+          <button id="zin" aria-label="Zoom in">+</button>
+          <button id="zout" aria-label="Zoom out">&minus;</button>
+          <button id="zfit" class="fit" aria-label="Reset the view">Fit</button>
+        </div>
+        <div class="msg" id="msg">Loading data</div>
+      </div>
+      <div class="months" id="months" role="group" aria-label="Month shown on the world view"></div>
+      <div class="legends">
+        <div>
+          <div class="lgt" id="lgCloud"></div>
+          <div class="ramp" id="rampCloud"></div>
+          <div class="lgs"><span>10% or less</span><span>50%</span><span>90% or more</span></div>
+        </div>
+        <div>
+          <div class="lgt" id="lgMark"></div>
+          <div class="ramp" id="rampMark"></div>
+          <div class="lgs"><span>0%</span><span>50%</span><span>100%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel card" id="panel" aria-label="City details">
+      <div class="pick">
+        <div>
+          <label class="k" for="city">Find a city</label>
+          <div class="combo">
+            <input id="city" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="citylist" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Type a name">
+            <ul id="citylist" role="listbox" aria-label="Cities" hidden></ul>
+          </div>
+        </div>
+        <div>
+          <label class="k" for="cmp">Compare with</label>
+          <select id="cmp"></select>
+        </div>
+      </div>
+      <div class="thr">
+        <p id="thrText">A pass is clear when at most this share of the 20 km square is cloud:</p>
+        <div class="seg" id="thr" role="group" aria-labelledby="thrText"></div>
+      </div>
+      <div class="vs" id="vs"></div>
+      <div class="chartwrap">
+        <span class="k">Clear share by calendar month</span>
+        <div class="chartkey" id="chartkey"></div>
+        <div id="chart"></div>
+        <div class="readout" id="readout"></div>
+        <details class="tbl"><summary>Monthly values as a table</summary><div id="tbl"></div></details>
+      </div>
+      <div class="radar"><span class="k">Radar</span>NISAR repeats every 12 days and clouds do not stop it.</div>
+    </aside>
+
+    <section class="ranksec" aria-label="Cities ranked by clear share">
+      <h2>Cities ranked by clear share</h2>
+      <p class="rankcap" id="rankcap"></p>
+      <div class="card">
+        <ol class="rank" id="rank"></ol>
+        <div class="rankfoot"><button class="act" id="rankall"></button></div>
+      </div>
+    </section>
+  </div>
+
+  <h2>Things to try</h2>
+  <ol class="try" id="try"></ol>
+
+  <h2>Why radar is different</h2>
+  <p class="serif">Sentinel-2 measures sunlight reflected from the ground. Cloud droplets scatter that light, so a cloud hides what is below it.</p>
+  <p class="serif">NISAR's L-band radar transmits its own pulses. Their wavelength is many times longer than a cloud droplet is wide, so the droplets scatter almost none of the signal. The radar also works at night because it does not use sunlight.</p>
+  <p class="serif">Heavy rain can weaken shorter radar wavelengths, such as X band.</p>
+
+  <h2>How this was measured</h2>
+  <p class="serif">For 52 cities, we took every Sentinel-2 L2A scene from 2023 to 2025. That is 20,980 scenes from the public <a href="https://earth-search.aws.element84.com/v1">Earth Search catalog</a> (Element 84). We read the scene classification (SCL) in a 20 km square centered on each city. For each day we kept the scene with the most valid pixels, and left out days when fewer than half of the square was imaged. A pass is clear when at most 10% of the valid square is cloud, cirrus or cloud shadow (SCL classes 3, 8, 9, 10). The 30% and 50% buttons change that limit and nothing else.</p>
+  <p class="serif">The world layer is a separate data set. It is ERA5 monthly mean total cloud cover, 2023 to 2025, on a 0.5 degree grid, averaged to 2 degree cells for this page and interpolated between cells for display.</p>
+  <ul class="lim">
+    <li>Each count describes a 20 km square around the city center. Cloud elsewhere in the metropolitan area does not enter it.</li>
+    <li>The SCL classifier can err.</li>
+    <li>Sentinel-2 passes happen around 10:30 local time. Cloud at other hours does not enter the count.</li>
+    <li>ERA5 averages all hours of the day, so a cell on the world layer can differ from the city count beside it.</li>
+    <li id="limGap">The longest gap is the time between two clear passes, or between a clear pass and an end of the record. A gap that touches an end of the record may be longer in reality.</li>
+    <li id="limN">The number of passes differs by city. The panel shows it for each city.</li>
+    <li>Monthly shares are rounded to whole percent. Each calendar month holds three years of passes.</li>
+  </ul>
+
+  <div class="foot">
+    <p>Built for CIVE 6359, SAR Remote Sensing, by the <a href="https://milillo.cive.uh.edu">RiSE Lab</a> at the University of Houston. <a href="../index.html">More modules</a>.</p>
+    <p>Contains modified Copernicus Sentinel data 2023-2025. Contains modified Copernicus Climate Change Service information 2026 (ERA5). Coastlines from Natural Earth (public domain). Cloud color ramp: oslo, from the scientific color maps by F. Crameri.</p>
+  </div>
+</div>
+<div class="sr" aria-live="polite" id="live"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} };
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+// oslo, Crameri scientific color maps: dark (clear) to white (cloud), monotonic in lightness. Sampled from cmcrameri.
+const OSLO=['#010101','#050a10','#0a121b','#0d1824','#0e1e2e','#0f2439','#112b44','#13324f','#15395b','#194067','#1c4873','#214f80','#26578c','#2e5f99','#3767a6','#4371b2','#507bbc','#5c84c3','#688cc7','#7393c9','#7d99ca','#869fca','#90a5c9','#99abc9','#a3b1ca','#adb8cb','#b8bfcd','#c3c8d1','#cfd2d8','#dbdde0','#e8e9ea','#f4f4f5','#ffffff'];
+const CLOUD_LO=.10, CLOUD_HI=.90;           // display range of the cloud ramp, same as Figure 3 of the post
+const MARK=['#6A176E','#BB3754','#ED6925','#FBB61A','#FCFFA4']; // marker ramp: share of passes clear, 0 to 100%
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const coarse=matchMedia('(pointer: coarse)');
+const S={thr:'10', month:0, sel:'Douala', cmp:'Houston', all:false};
+let D=null, CITY={}, GRID=null, viewer=null;
+
+/* ---------- helpers ---------- */
+const hex2rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+function rampAt(stops,t){ const n=stops.length-1, x=Math.max(0,Math.min(1,t))*n, i=Math.min(n-1,Math.floor(x)), f=x-i, a=hex2rgb(stops[i]), b=hex2rgb(stops[i+1]); return [0,1,2].map(k=>Math.round(a[k]+(b[k]-a[k])*f)); }
+const css=rgb=>`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+const cssGrad=stops=>`linear-gradient(90deg,${stops.join(',')})`;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const fold=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const stat=(name,thr)=>CITY[name].stats[thr||S.thr];
+const hasCmp=()=>S.cmp&&S.cmp!==S.sel;
+const trim1=v=>v.toFixed(1).replace(/\.0$/,'');
+const fmtShare=v=>(v<10?trim1(v):String(Math.round(v)))+'%';
+const fmtYear=v=>v<10?trim1(v):String(Math.round(v));
+function fmtDate(iso){ const [y,m,d]=iso.split('-').map(Number); return `${MON[m-1]} ${d}, ${y}`; }
+function fmtDateLong(iso){ const [y,m,d]=iso.split('-').map(Number); return `${MONL[m-1]} ${d}, ${y}`; }
+const shown=name=>S.month===0?stat(name).pct:stat(name).monthly[S.month-1];   // what a marker shows
+function boxMean(layer,lat0,lat1,lon0,lon1){ // area-weighted mean over the 2 degree cells whose centers fall in the box, %
+  let num=0,den=0; for(let j=0;j<90;j++){ const la=-89+2*j; if(la<lat0||la>lat1)continue; const w=Math.cos(la*Math.PI/180);
+    for(let i=0;i<180;i++){ const lo=-179+2*i; if(lo<lon0||lo>lon1)continue; num+=w*GRID[layer*16200+j*180+i]/255; den+=w; } }
+  return 100*num/den; }
+
+/* ---------- city panel ---------- */
+function renderVS(){
+  const a=stat(S.sel), b=hasCmp()?stat(S.cmp):null, A=CITY[S.sel], B=b?CITY[S.cmp]:null;
+  const two=(fa,fb)=>`<div class="vsvals"><div>${fa}</div>${b?`<div>${fb}</div>`:''}</div>`;
+  const gapNote=g=>{ const n=[]; if(g.gap_start===D.record_start)n.push('Starts at the first day of the record.'); if(g.gap_end===D.record_end)n.push('Ends at the last day of the record.'); return n.length?`<div class="note">${n.join(' ')}</div>`:''; };
+  const gap=g=>`<div class="v">${g.maxgap} <small>days</small></div><div class="sub">${fmtDate(g.gap_start)} to ${fmtDate(g.gap_end)}</div>${gapNote(g)}`;
+  $('vs').className='vs'+(b?'':' solo');
+  $('vs').innerHTML=
+    `<div class="vshead"><div><b><span class="sw a"></span>${esc(S.sel)}</b><small>${esc(A.continent)}</small></div>${b?`<div><b><span class="sw b"></span>${esc(S.cmp)}</b><small>${esc(B.continent)}</small></div>`:''}</div>`+
+    (b?'':`<p class="note1">Choose another city to compare with ${esc(S.sel)}.</p>`)+
+    `<div class="row"><span class="k">Share of passes clear</span>${two(`<div class="v">${fmtShare(a.pct)}</div><div class="sub">${a.clear} of ${A.n} passes</div>`,b&&`<div class="v">${fmtShare(b.pct)}</div><div class="sub">${b.clear} of ${B.n} passes</div>`)}</div>`+
+    `<div class="row"><span class="k">Clear passes per year</span>${two(`<div class="v">${fmtYear(a.per_year)} <small>per year</small></div>`,b&&`<div class="v">${fmtYear(b.per_year)} <small>per year</small></div>`)}</div>`+
+    `<div class="row"><span class="k">Longest gap between clear passes</span>${two(gap(a),b&&gap(b))}</div>`;
+}
+function barPath(x,w,y0,y1){ const r=Math.min(2.5,w/2,y0-y1); return `M${x} ${y0}V${y1+r}Q${x} ${y1} ${x+r} ${y1}H${x+w-r}Q${x+w} ${y1} ${x+w} ${y1+r}V${y0}Z`; }
+function renderChart(){
+  const a=stat(S.sel), b=hasCmp()?stat(S.cmp):null, W=320,H=146,L=28,R=2,T=6,B=18, pw=W-L-R, ph=H-T-B, cw=pw/12, y=v=>T+ph*(1-v/100);
+  const bw=b?Math.min(9.5,(cw-5)/2):Math.min(14,cw-7), gap=2;
+  let h='';
+  if(S.month>0){ h+=`<rect class="band" x="${L+(S.month-1)*cw+.5}" y="${T-3}" width="${cw-1}" height="${ph+3+B-1}" rx="3"/>`; }
+  [0,50,100].forEach(v=>{ h+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v}%</text>`; });
+  for(let m=0;m<12;m++){
+    const x0=L+m*cw, cx=x0+cw/2, va=a.monthly[m], vb=b?b.monthly[m]:null, xa=b?cx-bw-gap/2:cx-bw/2, xb=cx+gap/2, base=y(0);
+    h+=`<path class="a" d="${barPath(xa,bw,base,Math.min(y(va),base-1.2))}"/>`;
+    if(b)h+=`<path class="b" d="${barPath(xb,bw,base,Math.min(y(vb),base-1.2))}"/>`;
+    h+=`<text class="${S.month===m+1?'on':''}" x="${cx}" y="${H-5}" text-anchor="middle">${MON[m]}</text>`;
+    const lab=`${MONL[m]}: ${S.sel} ${va} percent${b?`, ${S.cmp} ${vb} percent`:''}. Show ${MONL[m]} on the world view.`;
+    h+=`<rect class="hit" data-m="${m+1}" tabindex="0" role="button" aria-pressed="${S.month===m+1}" aria-label="${esc(lab)}" x="${x0}" y="0" width="${cw}" height="${H}"/>`;
+  }
+  $('chart').innerHTML=`<svg class="bars" viewBox="0 0 ${W} ${H}" role="group" aria-label="Share of passes clear in each calendar month">${h}</svg>`;
+  $('chartkey').innerHTML=`<span><span class="sw a"></span>${esc(S.sel)}</span>`+(b?`<span><span class="sw b"></span>${esc(S.cmp)}</span>`:'');
+  const lab=S.month?MONL[S.month-1]:'All months', fa=S.month?a.monthly[S.month-1]+'%':fmtShare(a.pct), fb=b?(S.month?b.monthly[S.month-1]+'%':fmtShare(b.pct)):'';
+  $('readout').innerHTML=`<b>${lab}:</b> ${esc(S.sel)} ${fa}${b?`, ${esc(S.cmp)} ${fb}`:''} of passes clear. Select a month to show it on the world view.`;
+  $('tbl').innerHTML=`<table><thead><tr><th scope="col">Month</th><th scope="col">${esc(S.sel)}</th>${b?`<th scope="col">${esc(S.cmp)}</th>`:''}</tr></thead><tbody>`+
+    MONL.map((nm,i)=>`<tr><td>${nm}</td><td>${a.monthly[i]}%</td>${b?`<td>${b.monthly[i]}%</td>`:''}</tr>`).join('')+`</tbody></table>`;
+}
+$('chart').addEventListener('click',e=>{ const m=e.target.getAttribute&&e.target.getAttribute('data-m'); if(m){ stopPlay(); setMonth(+m===S.month?0:+m); } });
+$('chart').addEventListener('keydown',e=>{ const m=e.target.getAttribute&&e.target.getAttribute('data-m'); if(m&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); stopPlay(); setMonth(+m===S.month?0:+m); const again=$('chart').querySelector(`[data-m="${m}"]`); if(again)again.focus(); } });
+
+/* ---------- ranked list ---------- */
+const rankedCities=()=>D.cities.slice().sort((p,q)=>stat(p.name).pct-stat(q.name).pct||p.name.localeCompare(q.name));
+const SHORT=10;
+function renderRank(){
+  const rows=rankedCities().map((c,i)=>({c,i:i+1})), n=rows.length;
+  let list=rows;
+  if(!S.all){ list=rows.slice(0,SHORT); rows.slice(SHORT).forEach(r=>{ if(r.c.name===S.sel||r.c.name===S.cmp)list.push(r); }); }
+  $('rank').style.gridTemplateRows=`repeat(${Math.ceil(list.length/2)},auto)`;
+  $('rank').innerHTML=list.map(r=>{ const st=stat(r.c.name), cl=r.c.name===S.sel?' sel':(r.c.name===S.cmp?' cmp':'');
+    return `<li><button class="rankrow${cl}" data-city="${esc(r.c.name)}" aria-label="${esc(r.c.name)}, rank ${r.i} of ${n}, ${fmtShare(st.pct)} of passes clear"><span class="no">${r.i}</span><span class="nm">${esc(r.c.name)}</span><span class="tr"><i style="width:${st.pct}%"></i></span><span class="pc">${fmtShare(st.pct)}</span></button></li>`; }).join('');
+  $('rankcap').textContent=`Share of Sentinel-2 passes that were clear, 2023 to 2025, all months, lowest first. A pass is clear when at most ${S.thr}% of the 20 km square is cloud.`;
+  $('rankall').textContent=S.all?`Show the lowest ${SHORT} cities`:`Show all ${n} cities`;
+}
+$('rank').addEventListener('click',e=>{ const b=e.target.closest('[data-city]'); if(b){ setSel(b.dataset.city); bringToView(); } });
+$('rankall').onclick=()=>{ S.all=!S.all; renderRank(); };
+
+/* ---------- controls ---------- */
+function bringToView(target){ const el=target||(matchMedia('(max-width:980px)').matches?$('panel'):$('viewer')), r=el.getBoundingClientRect(); if(r.top<0||r.top>innerHeight*.45) el.scrollIntoView({behavior:reduced.matches?'auto':'smooth',block:'start'}); }
+function renderMonths(){ [...$('months').querySelectorAll('button[data-m]')].forEach(b=>{ const on=+b.dataset.m===S.month; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); }
+function renderLegends(){
+  const lab=S.month?MONL[S.month-1]:'annual';
+  $('lgCloud').textContent=`Mean cloud cover (ERA5), ${lab}. Dark is clear and white is cloud.`;
+  $('lgMark').textContent=`City markers: share of Sentinel-2 passes clear, ${S.month?MONL[S.month-1]:'all months'}, at the ${S.thr}% cloud limit.`;
+}
+function setMonth(m){ S.month=m; renderMonths(); renderLegends(); renderChart(); if(viewer)viewer.setLayer(m); }
+function setThr(t){ S.thr=t; [...$('thr').children].forEach(b=>{ const on=b.dataset.t===t; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); renderVS(); renderChart(); renderRank(); renderLegends(); if(viewer)viewer.refresh(); }
+function setSel(name,opt){ opt=opt||{}; S.sel=name; $('city').value=name; renderVS(); renderChart(); renderRank(); if(viewer){ if(!opt.noFly)viewer.focusCity(name); viewer.refresh(); }
+  $('live').textContent=`${name}: ${fmtShare(stat(name).pct)} of passes clear, ${fmtYear(stat(name).per_year)} clear passes per year, longest gap ${stat(name).maxgap} days.`; }
+function setCmp(name){ S.cmp=name; renderVS(); renderChart(); renderRank(); if(viewer)viewer.refresh(); }
+let playT=0;
+function stopPlay(){ if(playT){ clearInterval(playT); playT=0; $('play').textContent='Play'; $('play').classList.remove('on'); $('play').setAttribute('aria-pressed','false'); } }
+function startPlay(){ if(playT)return; $('play').textContent='Pause'; $('play').classList.add('on'); $('play').setAttribute('aria-pressed','true'); const step=()=>setMonth(S.month>=12?1:S.month+1); step(); playT=setInterval(step,1500); }
+function buildControls(){
+  $('months').innerHTML=`<button id="play" aria-pressed="false" aria-label="Play through the months">Play</button><button data-m="0" aria-label="Annual mean">Annual</button>`+MON.map((m,i)=>`<button data-m="${i+1}" aria-label="${MONL[i]}">${m}</button>`).join('');
+  $('months').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; if(b.id==='play'){ playT?stopPlay():startPlay(); return; } stopPlay(); setMonth(+b.dataset.m); });
+  $('thr').innerHTML=D.thresholds.map(t=>`<button data-t="${t}" aria-label="At most ${t} percent">${t}%</button>`).join('');
+  $('thr').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b)setThr(b.dataset.t); });
+  const names=D.cities.map(c=>c.name).sort((p,q)=>p.localeCompare(q));
+  $('cmp').innerHTML=names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  $('cmp').value=S.cmp; $('cmp').onchange=e=>setCmp(e.target.value);
+  buildCombo(names);
+}
+function buildCombo(names){
+  const inp=$('city'), ul=$('citylist'); let items=[], act=-1;
+  const close=()=>{ ul.hidden=true; inp.setAttribute('aria-expanded','false'); inp.removeAttribute('aria-activedescendant'); act=-1; };
+  const paint=()=>{ [...ul.children].forEach((li,i)=>{ const on=i===act; li.classList.toggle('active',on); li.setAttribute('aria-selected',on); if(on){ inp.setAttribute('aria-activedescendant',li.id); li.scrollIntoView({block:'nearest'}); } }); };
+  const open=q=>{ const f=fold(q||''); items=names.filter(n=>!f||fold(n).includes(f)||fold(CITY[n].continent).includes(f));
+    ul.innerHTML=items.length?items.map((n,i)=>`<li role="option" id="opt${i}" data-city="${esc(n)}" aria-selected="false"><span>${esc(n)}</span><small>${esc(CITY[n].continent)}</small></li>`).join(''):'<li class="none">No city in the list matches.</li>';
+    ul.hidden=false; inp.setAttribute('aria-expanded','true'); act=items.length&&f?0:-1; paint(); };
+  const choose=n=>{ close(); setSel(n); inp.blur(); };
+  inp.addEventListener('focus',()=>{ inp.select(); open(''); });
+  inp.addEventListener('input',()=>open(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){ e.preventDefault(); if(ul.hidden)open(inp.value); else if(items.length){ act=(act+1)%items.length; paint(); } }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(!ul.hidden&&items.length){ act=(act-1+items.length)%items.length; paint(); } }
+    else if(e.key==='Enter'){ e.preventDefault(); if(!ul.hidden&&items[act<0?0:act])choose(items[act<0?0:act]); }
+    else if(e.key==='Escape'){ close(); inp.value=S.sel; }
+  });
+  inp.addEventListener('blur',()=>{ setTimeout(()=>{ close(); inp.value=S.sel; },120); });
+  ul.addEventListener('pointerdown',e=>{ e.preventDefault(); const li=e.target.closest('[data-city]'); if(li)choose(li.dataset.city); });
+}
+function renderExtras(){
+  const c10=n=>CITY[n].stats['10'], best=D.cities.slice().sort((p,q)=>c10(q.name).pct-c10(p.name).pct)[0], worst=D.cities.slice().sort((p,q)=>c10(p.name).pct-c10(q.name).pct)[0];
+  const m=c10('Mumbai').monthly, ja=Math.round(boxMean(1,15,28,72,88)), jl=Math.round(boxMean(7,15,28,72,88));
+  const so=[]; for(let i=1;i<=12;i++)so.push(boxMean(i,-60,-50,-180,180));
+  const so0=Math.round(Math.min(...so)), so1=Math.round(Math.max(...so));
+  $('try').innerHTML=
+    `<li><b>Monsoon.</b> Mean cloud cover over South Asia, from 15 to 28 degrees north and 72 to 88 degrees east, is ${ja}% in January and ${jl}% in July. At the 10% limit, Sentinel-2 had a clear view of Mumbai on ${m[0]}% of its January passes and ${m[6]}% of its July passes.<div class="btns"><button class="act" data-try="mumbai1">Mumbai in January</button><button class="act" data-try="mumbai7">Mumbai in July</button></div></li>`+
+    `<li><b>Storm tracks.</b> The band from 50 to 60 degrees south holds a mean cloud cover between ${so0}% and ${so1}% in every month. Turn the globe to it and play through the year.<div class="btns"><button class="act" data-try="south">Southern Ocean, play the months</button></div></li>`+
+    `<li><b>Extremes.</b> At the 10% limit, ${esc(worst.name)} has the lowest clear share, with ${c10(worst.name).clear} of ${worst.n} passes clear. ${esc(best.name)} has the highest, with ${c10(best.name).clear} of ${best.n} passes clear.<div class="btns"><button class="act" data-city="${esc(worst.name)}">Open ${esc(worst.name)}</button><button class="act" data-city="${esc(best.name)}">Open ${esc(best.name)}</button></div></li>`;
+  $('try').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; stopPlay(); bringToView($('viewer'));
+    if(b.dataset.city){ setMonth(0); setSel(b.dataset.city); if(viewer)viewer.setMode('globe'); }
+    else if(b.dataset.try==='south'){ setMonth(0); if(viewer){ viewer.setMode('globe'); viewer.flyTo(150,-52); } startPlay(); }
+    else { setSel('Mumbai',{noFly:true}); setMonth(b.dataset.try==='mumbai1'?1:7); if(viewer){ viewer.setMode('globe'); viewer.flyTo(CITY.Mumbai.lon,CITY.Mumbai.lat); } }
+  });
+  const ns=D.cities.map(c=>c.n);
+  $('limGap').textContent=`The longest gap is the time between two clear passes, or between a clear pass and an end of the record. The record runs from ${fmtDateLong(D.record_start)} to ${fmtDateLong(D.record_end)}, so a gap that touches either date may be longer in reality.`;
+  $('limN').textContent=`The number of passes differs by city, from ${Math.min(...ns)} to ${Math.max(...ns)} passes in the three years. The panel shows it for each city.`;
+}
+
+/* ---------- world view: one mesh, one line set, one shader, a morph between a sphere and an Equal Earth map ---------- */
+function createViewer(coast){
+  const stage=$('stage'), ov=$('ov'), ctx=ov.getContext('2d'), RAD=Math.PI/180, CAM=7, MAP_LON0=11;
+  const renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:true,alpha:true});
+  renderer.setClearColor(0x000000,0);
+  const scene=new THREE.Scene(), camera=new THREE.Camera();
+
+  // cloud layers, padded by 2 columns on each side so the longitude seam filters without a jump
+  const NX=180, NY=90, PAD=2, TW=NX+2*PAD;
+  const layers=[]; for(let l=0;l<13;l++){ const a=new Uint8Array(TW*NY);
+    for(let j=0;j<NY;j++){ const off=l*NX*NY+j*NX; for(let i=0;i<TW;i++){ a[j*TW+i]=GRID[off+((i-PAD+NX)%NX)]; } }
+    const t=new THREE.DataTexture(a,TW,NY,THREE.LuminanceFormat,THREE.UnsignedByteType); t.minFilter=t.magFilter=THREE.LinearFilter; t.generateMipmaps=false; t.unpackAlignment=1; t.needsUpdate=true; layers.push(t); }
+  const lutData=new Uint8Array(256*4); for(let i=0;i<256;i++){ const c=rampAt(OSLO,i/255); lutData.set([c[0],c[1],c[2],255],i*4); }
+  const lut=new THREE.DataTexture(lutData,256,1,THREE.RGBAFormat,THREE.UnsignedByteType); lut.minFilter=lut.magFilter=THREE.LinearFilter; lut.generateMipmaps=false; lut.needsUpdate=true;
+
+  const U={uMorph:{value:0},uLon0:{value:0},uLat0:{value:0},uRg:{value:200},uRm:{value:100},uCam:{value:CAM},uPan:{value:new THREE.Vector2(0,0)},uView:{value:new THREE.Vector2(800,500)},
+    uPx:{value:.5},uA:{value:layers[0]},uB:{value:layers[0]},uFade:{value:0},uLut:{value:lut},uLo:{value:CLOUD_LO},uHi:{value:CLOUD_HI},uOutline:{value:new THREE.Color('#8A95A1')}};
+  const COMMON=`
+    uniform float uMorph,uLon0,uLat0,uRg,uRm,uCam; uniform vec2 uPan,uView;
+    const float PI=3.14159265359;
+    float relLon(float lon){ float d=lon-uLon0; return d-2.0*PI*floor((d+PI)/(2.0*PI)); }
+    vec2 eqEarth(float lam,float phi){ const float A1=1.340264,A2=-0.081106,A3=0.000893,A4=0.003796;
+      float th=asin(0.8660254038*sin(phi)), t2=th*th, t6=t2*t2*t2;
+      return vec2(2.0*1.7320508076*lam*cos(th)/(3.0*(9.0*A4*t6*t2+7.0*A3*t6+3.0*A2*t2+A1)), th*(A4*t6*t2+A3*t6+A2*t2+A1)); }
+    vec3 sph(float lam,float phi){ float cp=cos(phi),sp=sin(phi),cl=cos(lam),sl=sin(lam),ca=cos(uLat0),sa=sin(uLat0);
+      return vec3(cp*sl, sp*ca-cp*sa*cl, sp*sa+cp*ca*cl); }
+    vec3 place(float lam,float phi){ return mix(sph(lam,phi)*uRg, vec3(eqEarth(lam,phi)*uRm+uPan,0.0), uMorph); }
+    vec4 toClip(vec3 p){ float D=uCam*uRg, w=(D-p.z)/D; return vec4(p.x/(uView.x*0.5), p.y/(uView.y*0.5), -p.z/(2.0*D)*w, w); }`;
+  const FRAG_COMMON=`
+    const float PI=3.14159265359;
+    vec2 cloudST(float lam,float phi,float lon0){ float u=fract((lam+lon0)/(2.0*PI)+0.5); return vec2((u*${NX}.0+${PAD}.0)/${TW}.0,(phi+0.5*PI)/PI); }`;
+
+  // the surface
+  const NLON=240, NLAT=120, pos=new Float32Array((NLON+1)*(NLAT+1)*3), idx=new Uint16Array(NLON*NLAT*6);
+  for(let j=0,p=0;j<=NLAT;j++)for(let i=0;i<=NLON;i++){ pos[p++]=-Math.PI+2*Math.PI*i/NLON; pos[p++]=-Math.PI/2+Math.PI*j/NLAT; pos[p++]=0; }
+  for(let j=0,q=0;j<NLAT;j++)for(let i=0;i<NLON;i++){ const a=j*(NLON+1)+i,b=a+1,c=a+NLON+1,d=c+1; idx[q++]=a;idx[q++]=b;idx[q++]=d;idx[q++]=a;idx[q++]=d;idx[q++]=c; }
+  const gSurf=new THREE.BufferGeometry(); gSurf.setAttribute('position',new THREE.BufferAttribute(pos,3)); gSurf.setIndex(new THREE.BufferAttribute(idx,1));
+  const surf=new THREE.Mesh(gSurf,new THREE.ShaderMaterial({uniforms:U,side:THREE.DoubleSide,vertexShader:COMMON+`
+      varying vec2 vLL; varying float vNz;
+      void main(){ vec3 P=place(position.x,position.y); gl_Position=toClip(P); vLL=position.xy; vNz=sph(position.x,position.y).z; }`,
+    fragmentShader:FRAG_COMMON+`
+      uniform sampler2D uA,uB,uLut; uniform float uFade,uLo,uHi,uMorph,uLon0;
+      varying vec2 vLL; varying float vNz;
+      vec4 cubic(float v){ vec4 n=vec4(1.0,2.0,3.0,4.0)-v, s=n*n*n; float x=s.x, y=s.y-4.0*s.x, z=s.z-4.0*s.y+6.0*s.x; return vec4(x,y,z,6.0-x-y-z)/6.0; }
+      float bicubic(sampler2D t,vec2 st){ vec2 size=vec2(${TW}.0,${NY}.0), p=st*size-0.5, f=fract(p); p-=f;
+        vec4 xc=cubic(f.x), yc=cubic(f.y), c=p.xxyy+vec2(-0.5,1.5).xyxy, s=vec4(xc.xz+xc.yw,yc.xz+yc.yw), o=(c+vec4(xc.yw,yc.yw)/s)/size.xxyy;
+        float a=texture2D(t,o.xz).r,b=texture2D(t,o.yz).r,d=texture2D(t,o.xw).r,e=texture2D(t,o.yw).r, sx=s.x/(s.x+s.y), sy=s.z/(s.z+s.w);
+        return mix(mix(e,d,sx),mix(b,a,sx),sy); }
+      void main(){ vec2 st=cloudST(vLL.x,vLL.y,uLon0);
+        float v=bicubic(uA,st); if(uFade>0.001) v=mix(v,bicubic(uB,st),uFade);
+        float t=clamp((v-uLo)/(uHi-uLo),0.0,1.0);
+        vec3 col=texture2D(uLut,vec2(t*255.0/256.0+0.5/256.0,0.5)).rgb;
+        float limb=mix(0.66+0.34*smoothstep(0.1,0.62,vNz),1.0,uMorph);
+        gl_FragColor=vec4(col*limb,1.0); }`}));
+  surf.frustumCulled=false; surf.renderOrder=0; scene.add(surf);
+
+  // lines: coastlines, graticule and the map outline, as screen-space quads so the width holds on any screen and in both views
+  const segs=[]; // lonA,latA,lonB,latB,kind (radians for lon,lat)
+  const addLine=(pts,kind)=>{ for(let i=1;i<pts.length;i++)segs.push(pts[i-1][0]*RAD,pts[i-1][1]*RAD,pts[i][0]*RAD,pts[i][1]*RAD,kind); };
+  { let cur=[]; for(let i=0;i<coast.length;i+=2){ if(coast[i]===32767){ addLine(cur,0); cur=[]; } else cur.push([coast[i]/100,coast[i+1]/100]); } }
+  for(let lon=-180;lon<180;lon+=30){ const p=[]; for(let la=-90;la<=90;la+=3)p.push([lon,la]); addLine(p,1); }
+  for(let la=-60;la<=60;la+=30){ const p=[]; for(let lo=-180;lo<=180;lo+=3)p.push([lo,la]); addLine(p,1); }
+  { const p=[]; for(let la=-90;la<=90;la+=2)p.push([-180,la]); for(let lo=-180;lo<=180;lo+=3)p.push([lo,90]); for(let la=90;la>=-90;la-=2)p.push([180,la]); for(let lo=180;lo>=-180;lo-=3)p.push([lo,-90]); addLine(p,2); }
+  const NS=segs.length/5, lp=new Float32Array(NS*12), lb=new Float32Array(NS*12), lk=new Float32Array(NS*4), li=new Uint32Array(NS*6);
+  for(let s=0;s<NS;s++){ const o=s*5, ax=segs[o],ay=segs[o+1],bx=segs[o+2],by=segs[o+3],k=segs[o+4];
+    [[0,-1],[0,1],[1,-1],[1,1]].forEach((v,n)=>{ const q=s*4+n; lp.set([ax,ay,v[0]],q*3); lb.set([bx,by,v[1]],q*3); lk[q]=k; });
+    const q=s*4; li.set([q,q+1,q+3,q,q+3,q+2],s*6); }
+  const gLine=new THREE.BufferGeometry(); gLine.setAttribute('position',new THREE.BufferAttribute(lp,3)); gLine.setAttribute('aB',new THREE.BufferAttribute(lb,3)); gLine.setAttribute('aKind',new THREE.BufferAttribute(lk,1)); gLine.setIndex(new THREE.BufferAttribute(li,1));
+  const lines=new THREE.Mesh(gLine,new THREE.ShaderMaterial({uniforms:U,transparent:true,depthWrite:false,side:THREE.DoubleSide,vertexShader:COMMON+`
+      attribute vec3 aB; attribute float aKind; uniform float uPx;
+      varying vec2 vLL; varying float vD,vW,vKind,vNz;
+      void main(){ float t=position.z, side=aB.z, k=aKind;
+        float la=k>1.5?position.x:relLon(position.x), lb=k>1.5?aB.x:relLon(aB.x);
+        vKind=k; vD=0.0; vW=0.0; vLL=vec2(0.0); vNz=0.0;
+        if(abs(la-lb)>PI){ gl_Position=vec4(2.0,2.0,2.0,1.0); return; }
+        vec4 Ca=toClip(place(la,position.y)), Cb=toClip(place(lb,aB.y));
+        vec2 sa=Ca.xy/Ca.w*uView*0.5, sb=Cb.xy/Cb.w*uView*0.5, d=sb-sa; float L=length(d); d=L>1e-5?d/L:vec2(1.0,0.0);
+        float w=k<0.5?0.55:(k<1.5?0.4:0.65), ext=w+uPx;
+        vec4 C=t<0.5?Ca:Cb; C.xy+=vec2(-d.y,d.x)*side*ext/(uView*0.5)*C.w; C.z-=0.0015*C.w;
+        gl_Position=C; vD=side*ext; vW=w;
+        vLL=t<0.5?vec2(la,position.y):vec2(lb,aB.y);
+        vNz=t<0.5?sph(la,position.y).z:sph(lb,aB.y).z; }`,
+    fragmentShader:FRAG_COMMON+`
+      uniform sampler2D uA,uB; uniform float uFade,uLo,uHi,uMorph,uLon0,uPx,uCam; uniform vec3 uOutline;
+      varying vec2 vLL; varying float vD,vW,vKind,vNz;
+      void main(){ float a=1.0-smoothstep(vW-0.5*uPx,vW+0.5*uPx,abs(vD)); if(a<0.01)discard;
+        vec3 col; float op;
+        if(vKind>1.5){ col=uOutline; op=uMorph; }
+        else{ vec2 st=cloudST(vLL.x,vLL.y,uLon0); float v=mix(texture2D(uA,st).r,texture2D(uB,st).r,uFade);
+          float t=(v-uLo)/(uHi-uLo), sw=smoothstep(0.50,0.55,t);
+          col=mix(vec3(0.95,0.97,0.98),vec3(0.03,0.06,0.09),sw);
+          op=vKind<0.5?0.85:0.15;
+          op*=mix(smoothstep(1.0/uCam,1.0/uCam+0.2,vNz),1.0,uMorph); }
+        gl_FragColor=vec4(col,a*op); }`}));
+  lines.frustumCulled=false; lines.renderOrder=1; scene.add(lines);
+
+  /* view state */
+  const g={lon:-48,lat:14,zoom:1}, m={panx:0,pany:0,zoom:1};
+  let mode='globe', raw=0, W=800, H=500, dpr=1, raf=0, fadeT=null, curLayer=0, spin=null, hover=null, used=false;
+  const V={lon0:0,lat0:0,morph:0,Rg:200,Rm:100,panx:0,pany:0};
+  const tweens=new Set();
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  const wrapR=a=>a-2*Math.PI*Math.floor((a+Math.PI)/(2*Math.PI));
+  const wrapD=a=>a-360*Math.floor((a+180)/360);
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const X_MAX=2.70663, Y_MAX=1.31727;
+  const baseRg=()=>.44*Math.min(W,H), baseRm=()=>Math.min((W-22)/(2*X_MAX),(H-22)/(2*Y_MAX));
+  function eqEarth(lam,phi){ const A1=1.340264,A2=-.081106,A3=.000893,A4=.003796, th=Math.asin(.8660254038*Math.sin(phi)), t2=th*th, t6=t2*t2*t2;
+    return [2*1.7320508076*lam*Math.cos(th)/(3*(9*A4*t6*t2+7*A3*t6+3*A2*t2+A1)), th*(A4*t6*t2+A3*t6+A2*t2+A1)]; }
+  function project(lon,lat){ const lam=wrapR(lon*RAD-V.lon0), phi=lat*RAD, cp=Math.cos(phi), sp=Math.sin(phi), cl=Math.cos(lam), sl=Math.sin(lam), ca=Math.cos(V.lat0), sa=Math.sin(V.lat0);
+    const sx=cp*sl, sy=sp*ca-cp*sa*cl, sz=sp*sa+cp*ca*cl, e=eqEarth(lam,phi), k=V.morph;
+    const X=sx*V.Rg*(1-k)+(e[0]*V.Rm+V.panx)*k, Y=sy*V.Rg*(1-k)+(e[1]*V.Rm+V.pany)*k, Z=sz*V.Rg*(1-k), D=CAM*V.Rg, w=(D-Z)/D;
+    return {x:W/2+X/w, y:H/2-Y/w, nz:sz}; }
+  function computeView(){ const e=V.morph=ease(raw), d=wrapR(MAP_LON0*RAD-g.lon*RAD); V.lon0=g.lon*RAD+d*e; V.lat0=g.lat*RAD*(1-e); V.Rg=baseRg()*g.zoom; V.Rm=baseRm()*m.zoom; V.panx=m.panx; V.pany=m.pany;
+    U.uMorph.value=e; U.uLon0.value=V.lon0; U.uLat0.value=V.lat0; U.uRg.value=V.Rg; U.uRm.value=V.Rm; U.uPan.value.set(V.panx,V.pany); U.uView.value.set(W,H); U.uPx.value=1/dpr; }
+  const invalidate=()=>{ if(!raf)raf=requestAnimationFrame(tick); };
+  function tween(ms,fn,kind){ if(reduced.matches||ms<=0){ fn(1); invalidate(); return null; } const t={t0:performance.now(),ms,fn,kind}; tweens.add(t); invalidate(); return t; }
+  const cancelMotion=()=>{ spin=null; tweens.forEach(t=>{ if(t.kind==='view')tweens.delete(t); }); };
+  function clampPan(){ const mx=Math.max(0,X_MAX*baseRm()*m.zoom-W/2+28), my=Math.max(0,Y_MAX*baseRm()*m.zoom-H/2+28); m.panx=clamp(m.panx,-mx,mx); m.pany=clamp(m.pany,-my,my); }
+  function setTouchAction(){ ov.style.touchAction=(mode==='map'&&m.zoom<=1.001)?'pan-y':'none'; }
+
+  let last=0;
+  function tick(now){ raf=0; let busy=false; const dt=Math.min(50,now-(last||now)); last=now;
+    const target=mode==='map'?1:0;
+    if(raw!==target){ const step=reduced.matches?1:dt/1250; raw=target>raw?Math.min(target,raw+step):Math.max(target,raw-step); busy=raw!==target; }
+    tweens.forEach(t=>{ const p=Math.max(0,Math.min(1,(now-t.t0)/t.ms)); t.fn(t.ease===false?p:ease(p)); if(p>=1)tweens.delete(t); else busy=true; });
+    if(fadeT!==null){ const p=Math.min(1,(now-fadeT)/420); U.uFade.value=p; if(p>=1){ U.uA.value=U.uB.value; U.uFade.value=0; fadeT=null; } else busy=true; }
+    if(spin){ g.lon=wrapD(g.lon-spin.vx*dt); g.lat=clamp(g.lat+spin.vy*dt,-82,82); const f=Math.pow(.993,dt); spin.vx*=f; spin.vy*=f; if(Math.hypot(spin.vx,spin.vy)<.002)spin=null; else busy=true; }
+    computeView(); renderer.render(scene,camera); drawOverlay();
+    if(busy)invalidate(); else last=0; }
+
+  /* overlay: atmosphere, markers, labels */
+  let C={panel:'#fff',ink:'#111',rule:'#ccc',track:'#0D6379',los:'#A9500F'}, pts=[];
+  function readTheme(){ const s=getComputedStyle(document.documentElement), v=n=>s.getPropertyValue(n).trim();
+    C={panel:v('--panel'),ink:v('--ink'),rule:v('--rule'),track:v('--ser-a'),los:v('--ser-b'),faint:v('--faint')}; U.uOutline.value.set(v('--faint')); invalidate(); }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  const FONT='600 12px Archivo,"Helvetica Neue",Arial,sans-serif', FONTV='500 11px "JetBrains Mono",monospace', FONTS='600 11px Archivo,"Helvetica Neue",Arial,sans-serif';
+  function pill(p,name,val,color,boxes){ ctx.font=FONT; const wn=ctx.measureText(name).width; ctx.font=FONTV; const wv=ctx.measureText(val).width, w=wn+wv+27, h=22;
+    const tries=[[p.x+13,p.y-h-5],[p.x-w-13,p.y-h-5],[p.x+13,p.y+6],[p.x-w-13,p.y+6],[p.x-w/2,p.y-h-15],[p.x-w/2,p.y+15]];
+    let bx=null; for(const t of tries){ const x=clamp(t[0],6,W-w-6), y=clamp(t[1],6,H-h-6); if(!boxes.some(b=>x<b[0]+b[2]&&x+w>b[0]&&y<b[1]+b[3]&&y+h>b[1])){ bx=[x,y]; break; } }
+    if(!bx)bx=[clamp(tries[0][0],6,W-w-6),clamp(tries[0][1],6,H-h-6)];
+    boxes.push([bx[0],bx[1],w,h]); ctx.globalAlpha=p.a; roundRect(bx[0],bx[1],w,h,6); ctx.fillStyle=C.panel; ctx.fill(); ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(bx[0]+10,bx[1]+h/2,3.5,0,7); ctx.fillStyle=color; ctx.fill();
+    ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillStyle=C.ink; ctx.font=FONT; ctx.fillText(name,bx[0]+18,bx[1]+h/2+.5); ctx.font=FONTV; ctx.fillText(val,bx[0]+22+wn,bx[1]+h/2+.5); ctx.globalAlpha=1; }
+  function haloText(x,y,txt,al,boxes){ ctx.font=FONTS; const w=ctx.measureText(txt).width, h=14, tx=x+9, ty=y-h/2; if(tx<4||tx+w>W-4||ty<2||ty+h>H-2)return; if(boxes.some(b=>tx<b[0]+b[2]&&tx+w>b[0]&&ty<b[1]+b[3]&&ty+h>b[1]))return; boxes.push([tx,ty,w,h]);
+    ctx.globalAlpha=al; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.lineWidth=3; ctx.strokeStyle='rgba(8,12,18,.85)'; ctx.strokeText(txt,tx,y); ctx.fillStyle='#fff'; ctx.fillText(txt,tx,y); ctx.globalAlpha=1; }
+  function dot(p,r,fill){ ctx.globalAlpha=p.a; ctx.beginPath(); ctx.arc(p.x,p.y,r+2,0,7); ctx.fillStyle='rgba(8,12,18,.85)'; ctx.fill(); ctx.beginPath(); ctx.arc(p.x,p.y,r+1.1,0,7); ctx.fillStyle='#fff'; ctx.fill(); ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.fillStyle=fill; ctx.fill(); ctx.globalAlpha=1; }
+  function ring(p,r,color){ ctx.globalAlpha=p.a; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.strokeStyle='#fff'; ctx.lineWidth=4.5; ctx.stroke(); ctx.strokeStyle=color; ctx.lineWidth=2.6; ctx.stroke(); ctx.globalAlpha=1; }
+  function drawOverlay(){
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+    const atm=Math.pow(1-V.morph,2);
+    if(atm>.01){ const R=V.Rg*CAM/Math.sqrt(CAM*CAM-1), R2=R+Math.max(10,R*.09), gr=ctx.createRadialGradient(W/2,H/2,R,W/2,H/2,R2), rgb=hex2rgb(C.track);
+      gr.addColorStop(0,`rgba(${rgb},${.34*atm})`); gr.addColorStop(1,`rgba(${rgb},0)`); ctx.beginPath(); ctx.arc(W/2,H/2,R2,0,7); ctx.arc(W/2,H/2,R,2*Math.PI,0,true); ctx.fillStyle=gr; ctx.fill();
+      ctx.beginPath(); ctx.arc(W/2,H/2,R,0,7); ctx.strokeStyle=`rgba(${rgb},${.5*atm})`; ctx.lineWidth=1; ctx.stroke(); }
+    const k=V.morph, lim=1/CAM;
+    pts=D.cities.map(c=>{ const p=project(c.lon,c.lat), af=clamp((p.nz-lim)/.09,0,1); p.a=af+(1-af)*clamp((k-.3)/.45,0,1); if(p.x<-8||p.x>W+8||p.y<-8||p.y>H+8)p.a=0; p.c=c; return p; });
+    const r=W<520?3.8:4.4, v=c=>css(rampAt(MARK,shown(c.name)/100));
+    const others=pts.filter(p=>p.a>.02&&p.c.name!==S.sel&&!(hasCmp()&&p.c.name===S.cmp)).sort((a,b)=>a.nz-b.nz);
+    others.forEach(p=>dot(p,r,v(p.c)));
+    const boxes=[[0,0,210,52],[W-50,H-132,50,132]], ps=pts.find(p=>p.c.name===S.sel), pc=hasCmp()?pts.find(p=>p.c.name===S.cmp):null;
+    [[pc,C.los],[ps,C.track]].forEach(([p,col])=>{ if(p&&p.a>.02){ dot(p,r+1,v(p.c)); ring(p,r+6.5,col); } });
+    const val=n=>S.month?shown(n)+'%':fmtShare(shown(n));
+    if(ps&&ps.a>.3)pill(ps,S.sel,val(S.sel),C.track,boxes);
+    if(pc&&pc.a>.3)pill(pc,S.cmp,val(S.cmp),C.los,boxes);
+    if(hover&&hover.c.name!==S.sel&&!(hasCmp()&&hover.c.name===S.cmp)){ const h=pts.find(p=>p.c.name===hover.c.name); if(h&&h.a>.3){ dot(h,r+1,v(h.c)); pill(h,h.c.name,val(h.c.name),C.ink,boxes); } }
+    const zoomed=(mode==='map'&&m.zoom>=2)||(mode==='globe'&&g.zoom>=1.8);
+    if(zoomed&&(k<.02||k>.98)){ others.slice().reverse().forEach(p=>{ if(p.a>.7)haloText(p.x,p.y,p.c.name,p.a,boxes); }); }
+  }
+  function pick(x,y,rad){ let best=null,bd=rad; pts.forEach(p=>{ if(p.a<.4)return; const d=Math.hypot(p.x-x,p.y-y); if(d<bd){bd=d;best=p;} }); return best; }
+
+  /* interaction */
+  const ptrs=new Map(); let drag=null, pinch=null;
+  const firstUse=()=>{ if(!used){ used=true; $('hint').classList.add('off'); } };
+  function xy(e){ const r=ov.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; }
+  function zoomBy(f,cx,cy){ if(mode==='globe'){ g.zoom=clamp(g.zoom*f,.72,6); }
+    else{ const z0=m.zoom,z1=clamp(z0*f,1,14),q=z1/z0,fx=cx-W/2,fy=H/2-cy; m.panx=fx-(fx-m.panx)*q; m.pany=fy-(fy-m.pany)*q; m.zoom=z1; clampPan(); setTouchAction(); }
+    invalidate(); }
+  function zoomAnim(f){ cancelMotion(); firstUse(); let prev=1; tween(260,e=>{ const nowf=Math.pow(f,e); zoomBy(nowf/prev,W/2,H/2); prev=nowf; },'view'); }
+  ov.addEventListener('pointerdown',e=>{ if(e.button>0)return; const [x,y]=xy(e); try{ov.setPointerCapture(e.pointerId);}catch(_){}; ptrs.set(e.pointerId,[x,y]); cancelMotion();
+    if(ptrs.size===1){ drag={x,y,x0:x,y0:y,t0:performance.now(),moved:0,vx:0,vy:0,lt:performance.now(),touch:e.pointerType!=='mouse'}; pinch=null; ov.classList.add('grabbing'); }
+    else if(ptrs.size===2){ const a=[...ptrs.values()]; pinch={d:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])}; drag=null; firstUse(); } });
+  ov.addEventListener('pointermove',e=>{ const [x,y]=xy(e);
+    if(!ptrs.has(e.pointerId)){ if(e.pointerType==='mouse'){ const h=pick(x,y,14); if((h&&h.c.name)!==(hover&&hover.c.name)){ hover=h; ov.classList.toggle('onCity',!!h); drawOverlay(); } } return; }
+    ptrs.set(e.pointerId,[x,y]);
+    if(pinch&&ptrs.size>=2){ const a=[...ptrs.values()], d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]); if(pinch.d>0)zoomBy(d/pinch.d,(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2); pinch.d=d; return; }
+    if(!drag)return; const dx=x-drag.x, dy=y-drag.y, now=performance.now(), dtm=Math.max(10,now-drag.lt); drag.x=x; drag.y=y; drag.lt=now; drag.moved=Math.max(drag.moved,Math.hypot(x-drag.x0,y-drag.y0));
+    if(drag.moved>4){ firstUse(); if(hover){ hover=null; ov.classList.remove('onCity'); }
+      if(mode==='globe'){ const k=1/(baseRg()*g.zoom*RAD), dl=dx*k, da=dy*k; g.lon=wrapD(g.lon-dl); g.lat=clamp(g.lat+da,-82,82); drag.vx=.7*drag.vx+.3*dl/dtm; drag.vy=.7*drag.vy+.3*da/dtm; }
+      else{ m.panx+=dx; m.pany-=dy; clampPan(); }
+      invalidate(); } });
+  function endPtr(e){ if(!ptrs.has(e.pointerId))return; ptrs.delete(e.pointerId); ov.classList.remove('grabbing');
+    if(ptrs.size===1&&pinch){ pinch=null; const a=[...ptrs.values()][0]; drag={x:a[0],y:a[1],x0:a[0],y0:a[1],t0:0,moved:99,vx:0,vy:0,lt:performance.now(),touch:true}; return; }
+    if(drag&&e.type==='pointerup'){ const [x,y]=xy(e);
+      if(drag.moved<=6&&performance.now()-drag.t0<600){ const h=pick(x,y,drag.touch?26:16); if(h){ firstUse(); setSel(h.c.name); } }
+      else if(mode==='globe'&&!reduced.matches&&performance.now()-drag.lt<80&&Math.hypot(drag.vx,drag.vy)>.01){ const sp=Math.hypot(drag.vx,drag.vy), cap=Math.min(1,.22/sp); spin={vx:drag.vx*cap,vy:drag.vy*cap}; invalidate(); } }
+    drag=null; }
+  ov.addEventListener('pointerup',endPtr); ov.addEventListener('pointercancel',endPtr); ov.addEventListener('lostpointercapture',endPtr);
+  ov.addEventListener('pointerleave',()=>{ if(hover){ hover=null; ov.classList.remove('onCity'); drawOverlay(); } });
+  ov.addEventListener('wheel',e=>{ e.preventDefault(); cancelMotion(); firstUse(); const [x,y]=xy(e); zoomBy(Math.exp(-clamp(e.deltaY*(e.deltaMode===1?16:1),-120,120)*.0022),x,y); },{passive:false});
+  ov.addEventListener('keydown',e=>{ const step=e.shiftKey?30:10; let h=true; firstUse();
+    if(mode==='globe'){ const dl=step/g.zoom; if(e.key==='ArrowLeft'){ cancelMotion(); g.lon=wrapD(g.lon-dl); } else if(e.key==='ArrowRight'){ cancelMotion(); g.lon=wrapD(g.lon+dl); } else if(e.key==='ArrowUp'){ cancelMotion(); g.lat=clamp(g.lat+dl,-82,82); } else if(e.key==='ArrowDown'){ cancelMotion(); g.lat=clamp(g.lat-dl,-82,82); } else h=false; }
+    else{ const d=step*4; if(e.key==='ArrowLeft')m.panx+=d; else if(e.key==='ArrowRight')m.panx-=d; else if(e.key==='ArrowUp')m.pany-=d; else if(e.key==='ArrowDown')m.pany+=d; else h=false; clampPan(); }
+    if(e.key==='+'||e.key==='='){ zoomAnim(1.4); h=true; } else if(e.key==='-'||e.key==='_'){ zoomAnim(1/1.4); h=true; }
+    if(h){ e.preventDefault(); invalidate(); } });
+  $('zin').onclick=()=>zoomAnim(1.6); $('zout').onclick=()=>zoomAnim(1/1.6);
+  $('zfit').onclick=()=>{ cancelMotion(); firstUse(); const z0=g.zoom,mz=m.zoom,px=m.panx,py=m.pany; tween(450,e=>{ g.zoom=z0+(1-z0)*e; m.zoom=mz+(1-mz)*e; m.panx=px*(1-e); m.pany=py*(1-e); setTouchAction(); },'view'); };
+
+  function hintText(){ const a=coarse.matches?'Tap a city. Pinch to zoom.':'Click a city. Scroll to zoom.'; return (mode==='globe'?'Drag to rotate. ':'Drag to pan. ')+a; }
+  function setMode(next){ if(next===mode)return; mode=next; cancelMotion(); hover=null; $('vt').setAttribute('aria-checked',mode==='map'); $('hint').textContent=hintText(); setTouchAction(); last=0; invalidate(); }
+  $('vt').onclick=()=>{ firstUse(); setMode(mode==='globe'?'map':'globe'); };
+  function flyTo(lon,lat){ cancelMotion(); const a=g.lon,b=g.lat,d=wrapD(lon-a),t=clamp(lat,-70,70); tween(950,e=>{ g.lon=wrapD(a+d*e); g.lat=b+(t-b)*e; },'view'); }
+  function focusCity(name){ const c=CITY[name]; if(mode==='globe'){ flyTo(c.lon,c.lat); }
+    else{ g.lon=c.lon; g.lat=clamp(c.lat,-70,70);  // the globe returns to this city
+      if(m.zoom>1.05){ cancelMotion(); const e=eqEarth(wrapR((c.lon-MAP_LON0)*RAD),c.lat*RAD), tx=-e[0]*baseRm()*m.zoom, ty=-e[1]*baseRm()*m.zoom, px=m.panx, py=m.pany; tween(650,q=>{ m.panx=px+(tx-px)*q; m.pany=py+(ty-py)*q; clampPan(); },'view'); }
+      else invalidate(); } }
+  function setLayer(l){ if(l===curLayer)return; curLayer=l; if(fadeT!==null){ U.uA.value=U.uB.value; }
+    U.uB.value=layers[l]; U.uFade.value=0; if(reduced.matches){ U.uA.value=layers[l]; } else fadeT=performance.now(); invalidate(); }
+  function resize(){ const r=stage.getBoundingClientRect(); W=Math.max(10,r.width); H=Math.max(10,r.height); dpr=Math.min(devicePixelRatio||1,2); renderer.setPixelRatio(dpr); renderer.setSize(W,H,false); ov.width=Math.round(W*dpr); ov.height=Math.round(H*dpr); clampPan(); invalidate(); }
+  new ResizeObserver(resize).observe(stage);
+  new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTheme);
+  (document.fonts&&document.fonts.ready||Promise.resolve()).then(invalidate);
+  readTheme(); resize(); $('hint').textContent=hintText(); setTouchAction();
+  // a short turn on load that settles with Houston and the default city both in view
+  if(!reduced.matches){ const b=g.lon; g.lon=b-34; flyToInit(b); }
+  function flyToInit(b){ const a=g.lon; tween(1500,e=>{ g.lon=a+(b-a)*e; },'view'); }
+  return {setLayer,setMode,flyTo,focusCity,refresh:invalidate};
+}
+
+/* ---------- start ---------- */
+Promise.all([fetch('data/cities.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); }),
+  fetch('data/era5_tcc_2deg.bin').then(r=>{ if(!r.ok)throw new Error(r.status); return r.arrayBuffer(); }),
+  fetch('data/coast.bin').then(r=>{ if(!r.ok)throw new Error(r.status); return r.arrayBuffer(); })])
+.then(([cities,grid,coast])=>{
+  D=cities; D.cities.forEach(c=>CITY[c.name]=c); GRID=new Uint8Array(grid);
+  document.querySelectorAll('.lede').forEach(el=>{ el.innerHTML=el.innerHTML.replace('52 cities',D.cities.length+' cities'); });
+  const low=D.cities.slice().sort((p,q)=>stat(p.name).pct-stat(q.name).pct)[0]; S.sel=low.name;
+  buildControls(); $('rampCloud').style.background=cssGrad(OSLO); $('rampMark').style.background=cssGrad(MARK);
+  $('city').value=S.sel; setThr('10'); renderMonths(); renderExtras();
+  try{ if(!window.THREE)throw new Error('three.js did not load'); viewer=createViewer(new Int16Array(coast)); $('msg').remove(); }
+  catch(err){ console.warn(err); $('msg').textContent='This view needs WebGL and three.js. The city panel and the ranked list still work.'; ['vt','hint'].forEach(i=>$(i).hidden=true); document.querySelector('.zoom').hidden=true; $('ov').style.pointerEvents='none'; $('ov').removeAttribute('tabindex'); }
+})
+.catch(err=>{ console.error(err); $('msg').textContent='The data files did not load. Serve this page over HTTP.'; });
+</script>
+</body>
+</html>
