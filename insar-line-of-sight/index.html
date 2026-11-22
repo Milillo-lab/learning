@@ -132,7 +132,7 @@ ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; 
   </div>
 
   <h2>The Ridgecrest numbers of Radar, Explained #2</h2>
-  <p class="serif">Radar, Explained #2 says how much of 1 cm of motion the radar records at Ridgecrest, for vertical, east-west and north-south motion. Those numbers come from the descending Sentinel-1 pass of 4 and 16 July 2019 (Figure 1 of the post). The ARIA product of that pair gives, at the center of the scene, an incidence angle of 39.94° and an azimuth angle of −10.40°, the direction from the ground to the satellite measured counterclockwise from east. The heading is 180° minus that angle, 190.40°, a little west of due south. The ascending pair of 4 and 10 July 2019 gives 40.11° and −170.32°, so a heading of 350.32°.</p>
+  <p class="serif">Radar, Explained #2 says how much of 1 cm of motion the radar records at Ridgecrest, for vertical, east-west and north-south motion. Those numbers are the average of the two Sentinel-1 passes of July 2019, which differ from each other by less than 0.01 cm: the descending pair of 4 and 16 July (Figure 1 of the post) and the ascending pair of 4 and 10 July. The ARIA product of the descending pair gives, at the center of the scene, an incidence angle of 39.94° and an azimuth angle of −10.40°, the direction from the ground to the satellite measured counterclockwise from east. The heading is 180° minus that angle, 190.40°, a little west of due south. The ascending pair of 4 and 10 July 2019 gives 40.11° and −170.32°, so a heading of 350.32°.</p>
   <div class="tabwrap"><table class="tab" id="chk"></table></div>
   <div class="doit"><span class="k">On the page</span>Press Ridgecrest geometry (ARIA), then 1 cm up, 1 cm east and 1 cm north in turn: the weight table of the simulator repeats these values. The east weight changes sign between the passes, because they look from opposite sides. The north weight keeps the same sign, because both passes fly within 11° of the north-south line, one a little west of north and the other a little west of south.</div>
 
@@ -240,9 +240,9 @@ function tables(){
   $('wt').innerHTML=`<tr><th>Weight</th><th class="ca">asc</th><th class="cd">desc</th></tr>`+
     ['east','north','up'].map((n,i)=>`<tr><td>${n}</td><td>${f3(wa[i])}</td><td>${f3(wd[i])}</td></tr>`).join('')+
     `<tr class="sum"><td>LOS change</td><td>${f2(la)} cm</td><td>${f2(ld)} cm</td></tr>`;
-  $('chk').innerHTML=`<tr><th>1 cm of motion registers as</th><th>Descending, 4 to 16 July</th><th>Ascending, 4 to 10 July</th></tr>`+
+  $('chk').innerHTML=`<tr><th>1 cm of motion registers as</th><th>Descending, 4 to 16 July</th><th>Ascending, 4 to 10 July</th><th>Average of the two</th></tr>`+
     [['up or down',2],['east or west',0],['north or south',1]].map(([n,i])=>{ const A=ARIA_W.asc[i], D=ARIA_W.desc[i];
-      return `<tr><td>${n}</td><td>${Math.abs(D).toFixed(3)} cm</td><td>${Math.abs(A).toFixed(3)} cm</td></tr>`; }).join('');
+      return `<tr><td>${n}</td><td>${Math.abs(D).toFixed(3)} cm</td><td>${Math.abs(A).toFixed(3)} cm</td><td>${((Math.abs(D)+Math.abs(A))/2).toFixed(3)} cm</td></tr>`; }).join('');
 }
 let ARIA_W;
 function syncSliders(){ $('th').value=G[cur].th; $('hd').value=G[cur].h; }
