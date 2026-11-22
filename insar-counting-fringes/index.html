@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counting Fringes</title>
+<meta name="description" content="Interactive: count the fringes along a profile across the real Sentinel-1 interferogram of the 2019 Ridgecrest earthquakes. Each fringe adds half a wavelength; compare your running total with the unwrapped ARIA product and see where counting breaks at the rupture. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --band:#DDE3EA; --axis:#B9C3CE;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --band:#25303C; --axis:#34404D;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --band:#25303C; --axis:#34404D;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1040px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block; max-width:100%; overflow-x:auto}
+.app{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-top:8px}
+@media (max-width:860px){ .app{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:12px}
+.card h3{margin:0 0 6px; font-size:12px; font-family:"JetBrains Mono",monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:500}
+canvas{width:100%; height:auto; display:block; border-radius:8px; background:var(--panel-2); touch-action:none}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select,input[type=number]{font:inherit; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+input[type=number]{width:90px}
+button.act{font:inherit; font-size:13px; margin:10px 6px 0 0; padding:7px 11px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+button.act:hover{border-color:var(--track)}
+.read{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.stat{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:8px 10px}
+.stat .k{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:19px; font-weight:600}
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px; color:var(--ink)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+.msg{font-size:13px; color:var(--los); min-height:20px; margin-top:8px}
+.legend{display:flex; align-items:center; gap:10px; font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--muted); margin-top:8px}
+.bar{display:inline-block; width:150px; height:10px; border-radius:3px; border:1px solid var(--rule); background:linear-gradient(90deg,#0ff,#00f,#f0f,#f00,#ff0,#0f0,#0ff)}
+.predict{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--los); border-radius:8px; padding:10px 13px; margin:12px 0; font-size:14.5px}
+.predict .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--los); margin-bottom:3px}
+.predict .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:6px}
+.predict select{width:auto}
+.doit{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--track); border-radius:8px; padding:9px 13px; margin:12px 0; font-size:14.5px; max-width:70ch}
+.doit .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--track); margin-bottom:3px}
+ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:70ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Counting fringes</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Counting fringes at Ridgecrest</h1>
+  <p class="lede">Each band of color in an interferogram is one turn of the phase, half a wavelength of change in the distance to the satellite. The radar does not count the turns; you can. Walk along a line across the real interferogram of the 2019 Ridgecrest earthquakes, mark every place where the colors restart, and watch your count build up the motion, until the ground breaks and counting stops working.</p>
+
+  <h2>The idea in one equation</h2>
+  <p class="serif">The interferogram stores the phase only modulo one turn: a reading between −½ and +½ of a fringe. To recover the motion, start from a point taken as fixed and add one fringe each time the reading restarts:</p>
+  <div class="eq">d<sub>LOS</sub>(x) = (λ/2) · [ n(x) + φ(x)/2π ]</div>
+  <p class="serif">where φ is the wrapped phase, n(x) the number of restarts crossed between the reference and x (counted with their direction), and λ/2 = <span id="cycS1"></span> for Sentinel-1. This is phase unwrapping. It works as long as neighboring pixels differ by less than half a fringe, so that every restart is a real restart and not noise. Where the ground broke, pixels next to each other moved by more than that, or the phase turned to noise, and the count can no longer be trusted.</p>
+
+  <h2>Count the fringes</h2>
+  <div class="predict" id="pbox"><span class="k">Predict first</span>
+    Look at the map before you count. Going from A to the edge of the gray band (where the coherence drops below 0.3), how many fringes do you cross, and did the ground move toward the satellite or away from it?
+    <div class="row"><input type="number" id="pn" min="0" max="60" step="1" placeholder="fringes"> <select id="pd"><option value="">direction</option><option value="1">toward the satellite</option><option value="-1">away from the satellite</option></select> <button class="act" id="plock" style="margin:0">Lock in my guess</button> <span id="pres"></span></div>
+  </div>
+  <div class="app">
+    <div class="card">
+      <h3>Sentinel-1, 4 and 16 July 2019, descending</h3>
+      <canvas id="map" width="720" height="576"></canvas>
+      <div class="legend"><span class="bar"></span><span>one cycle = <span id="cycl"></span> of change in distance</span></div>
+      <div class="cap">Drag A or B to move the profile. Stars: epicenters of the magnitude 6.4 (4 July) and 7.1 (5 July, local time) earthquakes. About 72 km west to east, 64 km south to north, 90 m pixels.</div>
+    </div>
+    <div class="card">
+      <label>Wrap the same motion at</label>
+      <select id="wav">
+        <option value="s1">Sentinel-1 C band, 2.77 cm (the data)</option>
+        <option value="nisar">NISAR L band, 12.10 cm (rewrapped)</option>
+      </select>
+      <div class="chk"><input type="checkbox" id="mask"><label for="mask" style="margin:0">gray out coherence below 0.3</label></div>
+      <div>
+        <button class="act" id="auto">Count for me</button>
+        <button class="act" id="clear">Clear my count</button>
+        <button class="act" id="reset">Profile of the post</button>
+      </div>
+      <div class="read">
+        <div class="stat"><div class="k">fringes marked</div><div class="v" id="nm">0</div></div>
+        <div class="stat"><div class="k">net count at B</div><div class="v" id="nb">0</div></div>
+        <div class="stat"><div class="k">your total at B</div><div class="v" id="tb">–</div></div>
+        <div class="stat"><div class="k">ARIA unwrapped at B</div><div class="v" id="ub">–</div></div>
+      </div>
+      <div class="msg" id="msg"></div>
+      <div class="cap">All values are along the line of sight, relative to A, positive toward the satellite.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <canvas id="prof" width="980" height="470"></canvas>
+    <div class="cap">Top: the wrapped reading along the profile, what the interferogram stores. Click on a restart (a vertical jump of the line) to count it; click it again to remove it. Bottom: your running total, the reading plus one fringe per restart you marked (orange), against the unwrapped value of the ARIA product (blue). Gray columns: coherence below 0.3.</div>
+    <div class="read" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><div class="k">distance from A</div><div class="v" id="hx">–</div></div><div class="stat"><div class="k">wrapped reading</div><div class="v" id="hw">–</div></div><div class="stat"><div class="k">your total</div><div class="v" id="hy">–</div></div><div class="stat"><div class="k">ARIA unwrapped</div><div class="v" id="hu">–</div></div></div>
+  </div>
+
+  <h2>Walk through it</h2>
+  <div class="doit"><span class="k">1. From A to the gray band</span>Start at A, on the left of the profile chart, and click each restart until the gray band begins. The direction of each restart sets the sign: a jump down of the reading means the ground kept moving toward the satellite past half a fringe, so one fringe is added; a jump up subtracts one. On the profile of the post the restarts add up to a net six fringes away from the satellite, and your total at the edge of the band sits on the blue line, about 17 cm away from the satellite.</div>
+  <div class="doit"><span class="k">2. The other side of the band</span>Now mark the restarts between the far edge of the band and B, and leave the band itself alone. Your orange line on that side runs parallel to the blue one, shifted by a whole number of fringes: the fringes inside the band that you did not count. Look closely at the first few pixels past the band. The fringes there are so tight that one 90 m pixel holds more than half a fringe, so a restart can hide between two pixels and the count slips by one. Depending on where you take the edge, the ground just past the band sits 40 to 50 cm closer to the satellite than B, some fifteen to seventeen fringes.</div>
+  <div class="doit"><span class="k">3. Across the band</span>Press Count for me. The page marks every jump larger than half a fringe along the whole line, the simplest unwrapping rule there is. Inside the gray band the jumps come in noisy bursts, and after the band the orange line no longer follows the blue one: on the profile of the post the two disagree at B by dozens of fringes. The ARIA product, unwrapped with a more careful algorithm (SNAPHU), does not settle the question either: in the band it is guessing too, and its value across the band is not a measurement.</div>
+  <div class="doit"><span class="k">4. A longer wavelength</span>Switch the wrap to NISAR L band. The motion is the same; only the length of a fringe changes, from 2.77 to 12.10 cm, so there are about a quarter as many restarts to count, and fewer of them crowd together near the fault. Count for me still goes wrong across the band, but on the profile of the post by five fringes instead of dozens. This is the Sentinel-1 motion rewrapped, not NISAR data: NISAR did not fly in 2019, and its longer wave would also keep more coherence in the broken ground, which this page does not model.</div>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>Move A next to the fault, inside the band, and count toward B. What happens to your total, and why is the reference point usually chosen far from the deformation?</li>
+    <li>Draw a profile that stays on one side of the fault, from the southwest corner toward the west edge of the band. Does Count for me now agree with ARIA all the way?</li>
+    <li>With the Sentinel-1 wrap, find the place along the profile where two restarts are closest together. How far apart are they, and how many pixels does that make? What does the rule "less than half a fringe between neighbors" say about a 90 m pixel there?</li>
+    <li>Compare the count from A to the band at C band and at L band. Is the L-band count exactly the C-band count times 2.77/12.10? Why only approximately?</li>
+  </ol>
+
+  <h2>How it was made</h2>
+  <p class="serif">Data: the ARIA Sentinel-1 geocoded unwrapped interferogram (GUNW, version 3.0.1) of descending track 71, 4 and 16 July 2019, with its coherence and connected components, cropped to 35.40° to 36.04° N and 118.00° to 117.20° W on the product's 0.000833° (about 90 m) grid. The unwrapped phase u is converted to a change in distance toward the satellite with d = λu/4π, with λ = 5.5466 cm from the product metadata (ARIA convention: later date first, positive toward the satellite), and stored losslessly to 0.0014 cm. The profile of the post runs from A (35.52° N, 117.80° W) to B (35.92° N, 117.40° W); values along it are read from the nearest pixel. On that profile the page reproduces the numbers of Figure 3 of Radar, Explained #2: 17.4 cm away from the satellite from A to the band, 46.2 cm toward it from B to the band. The NISAR wrap uses λ = 24.20 cm, from the center frequency of 1239 MHz of NISAR's frequency A in the 40+5 MHz mode (<a href="https://nisar-docs.asf.alaska.edu/nisar-intro/">ASF NISAR Data User Guide, Table 1</a>). The data preparation script is tools/make_learning_data.py in the Radar, Explained #2 project.</p>
+
+  <h2>Read more</h2>
+  <p class="serif">Fielding, E.J., et al. (2020). Surface deformation related to the 2019 Mw 7.1 and 6.4 Ridgecrest earthquakes in California from GPS, SAR interferometry, and SAR pixel offsets. <i>Seismological Research Letters</i> 91(4), 2035–2046. <a href="https://doi.org/10.1785/0220190302">doi:10.1785/0220190302</a><br>
+  Chen, C.W., Zebker, H.A. (2001). Two-dimensional phase unwrapping with use of statistical models for cost functions in nonlinear optimization. <i>Journal of the Optical Society of America A</i> 18(2), 338–351. <a href="https://doi.org/10.1364/JOSAA.18.000338">doi:10.1364/JOSAA.18.000338</a><br>
+  Itoh, K. (1982). Analysis of the phase unwrapping algorithm. <i>Applied Optics</i> 21(14), 2470. <a href="https://doi.org/10.1364/AO.21.002470">doi:10.1364/AO.21.002470</a><br>
+  Companion pages: <a href="../insar-phase-clock/">Phase clock across sensors</a> · <a href="../insar-line-of-sight/">Line of sight</a></p>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, University of Houston, and for Radar, Explained #2. Contains modified Copernicus Sentinel data 2019, processed by ESA and ARIA NASA/JPL (ARIA S1-GUNW products, ASF DAAC). Epicenters: USGS (events ci38443183 and ci38457511).</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} drawProfile();};
+
+// grid and encoding from rc_meta.json (make_learning_data.py)
+const M={w:960,h:768,lat0:36.0396837175,lon0:-117.9995841335,dlat:-0.000833333,dlon:0.000833333,lo:-80,hi:100};
+const LAM={s1:0.0554657616, nisar:0.2419632};   // m: ARIA product metadata; c / 1239 MHz (NISAR frequency A, 40+5 MHz mode)
+const KX=111.32*Math.cos(35.7*Math.PI/180), KY=111.32;     // km per degree, as in the post's figures
+const EQ=[[-117.5038333,35.7053333],[-117.5993333,35.7695]]; // USGS ComCat ci38443183 (M6.4), ci38457511 (M7.1)
+const A0=[-117.80,35.52], B0=[-117.40,35.92];
+let P={A:A0.slice(), B:B0.slice()}, los, coh, cc, prof=null, marks=new Set(), guess=null;
+const $=id=>document.getElementById(id), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C=()=>LAM[$('wav').value]/2*100;
+const fcm=v=>(v<0?'−':'+')+Math.abs(v).toFixed(1)+' cm';
+function hsv(p){const h=p*6,i=Math.floor(h)%6,f=h-Math.floor(h),q=1-f,t=f; return [[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i];}
+function load(src){return new Promise(r=>{const i=new Image(); i.onload=()=>{const c=document.createElement('canvas'); c.width=M.w; c.height=M.h; const g=c.getContext('2d'); g.drawImage(i,0,0); r(g.getImageData(0,0,M.w,M.h).data);}; i.src=src;});}
+async function init(){
+  const a=await load('rc_los.png'), b=await load('rc_aux.png'); const n=M.w*M.h;
+  los=new Float32Array(n); coh=new Float32Array(n); cc=new Uint8Array(n);
+  for(let i=0;i<n;i++){ los[i]=M.lo+((a[4*i]<<8)+a[4*i+1])/65535*(M.hi-M.lo); coh[i]=b[4*i]/255; cc[i]=b[4*i+1]; }
+  update();
+}
+// map
+const mc=$('map'), mx=mc.getContext('2d'), SC=mc.width/M.w;
+const toPx=(lon,lat)=>[(lon-M.lon0)/M.dlon*SC, (lat-M.lat0)/M.dlat*SC];
+const toLL=(x,y)=>[M.lon0+x/SC*M.dlon, M.lat0+y/SC*M.dlat];
+let base=null, baseKey='';
+function baseLayer(){
+  const key=$('wav').value+$('mask').checked; if(base&&baseKey===key) return base;
+  const c=document.createElement('canvas'); c.width=M.w; c.height=M.h; const g=c.getContext('2d'), im=g.createImageData(M.w,M.h), cy=C(), msk=$('mask').checked;
+  for(let i=0;i<M.w*M.h;i++){ let col; if(msk&&coh[i]<0.3) col=[0.55,0.55,0.55]; else { let p=(-los[i]/cy+0.5)%1; if(p<0)p+=1; col=hsv(p); }
+    im.data[4*i]=255*col[0]; im.data[4*i+1]=255*col[1]; im.data[4*i+2]=255*col[2]; im.data[4*i+3]=255; }
+  g.putImageData(im,0,0); base=c; baseKey=key; return c; }
+function halo(g,s,x,y,font,col,align){ g.font=font; g.textAlign=align||'left'; g.lineWidth=4; g.strokeStyle='rgba(255,255,255,.9)'; g.strokeText(s,x,y); g.fillStyle=col||'#111'; g.fillText(s,x,y); g.textAlign='left'; }
+function star(g,x,y,r){ g.beginPath(); for(let k=0;k<10;k++){ const a=-Math.PI/2+k*Math.PI/5, rr=k%2?r*0.45:r; g.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a)); } g.closePath(); g.fillStyle='#fff'; g.fill(); g.strokeStyle='#111'; g.lineWidth=1.3; g.stroke(); }
+function arr(g,x0,y0,x1,y1,col,lab){ g.strokeStyle=col; g.fillStyle=col; g.lineWidth=3; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); const a=Math.atan2(y1-y0,x1-x0);
+  g.beginPath(); g.moveTo(x1,y1); g.lineTo(x1-10*Math.cos(a-0.4),y1-10*Math.sin(a-0.4)); g.lineTo(x1-10*Math.cos(a+0.4),y1-10*Math.sin(a+0.4)); g.fill(); halo(g,lab,x1+(x1<x0?-6:6),y1+4,'600 12px Archivo, sans-serif',col,x1<x0?'right':'left'); }
+function drawMap(){
+  const W=mc.width, H=mc.height; mx.imageSmoothingEnabled=false; mx.drawImage(baseLayer(),0,0,W,H);
+  EQ.forEach(e=>{ const [x,y]=toPx(...e); star(mx,x,y,10); });
+  const [ax,ay]=toPx(...P.A), [bx,by]=toPx(...P.B);
+  mx.lineWidth=6; mx.strokeStyle='#fff'; mx.beginPath(); mx.moveTo(ax,ay); mx.lineTo(bx,by); mx.stroke();
+  mx.lineWidth=3; mx.strokeStyle='#111'; mx.stroke();
+  if(prof&&hover!=null){ const k=hover, x=ax+(bx-ax)*k/(prof.n-1), y=ay+(by-ay)*k/(prof.n-1); mx.beginPath(); mx.arc(x,y,6,0,2*Math.PI); mx.fillStyle=css('--los'); mx.fill(); mx.strokeStyle='#fff'; mx.lineWidth=2; mx.stroke(); }
+  [['A',ax,ay],['B',bx,by]].forEach(([s,x,y])=>{ mx.beginPath(); mx.arc(x,y,9,0,2*Math.PI); mx.fillStyle='#fff'; mx.fill(); mx.strokeStyle='#111'; mx.lineWidth=2; mx.stroke(); halo(mx,s,x,y+5,'700 14px Archivo, sans-serif','#111','center'); });
+  // flight and look direction (descending: heading 190.4°, looks 280.4°), north arrow, scale bar
+  const b=d=>[Math.sin(d*Math.PI/180),-Math.cos(d*Math.PI/180)]; mx.fillStyle='rgba(255,255,255,.85)'; mx.fillRect(8,8,150,84);
+  let [fx,fy]=b(190.4); arr(mx,30,16,30+44*fx,16+44*fy,'#0D6379',''); halo(mx,'flight',40,44,'600 12px Archivo, sans-serif','#0D6379');
+  let [lx,ly]=b(280.4); arr(mx,146,62,146+56*lx,62+56*ly,'#A9500F',''); halo(mx,'radar looks',150,84,'600 12px Archivo, sans-serif','#A9500F','right');
+  halo(mx,'N ↑',W-40,24,'700 14px Archivo, sans-serif','#111');
+  const px=10/(KX*M.dlon)*SC, x0=W-px-24, y0=H-20; mx.fillStyle='rgba(255,255,255,.85)'; mx.fillRect(x0-8,y0-22,px+16,30); mx.fillStyle='#111'; mx.fillRect(x0,y0,px,5); mx.font='12px Archivo, sans-serif'; mx.fillText('10 km',x0+px/2-15,y0-7);
+}
+// profile
+function sampleProfile(){
+  const [ax,ay]=[(P.A[0]-M.lon0)/M.dlon,(P.A[1]-M.lat0)/M.dlat], [bx,by]=[(P.B[0]-M.lon0)/M.dlon,(P.B[1]-M.lat0)/M.dlat];
+  const n=Math.max(50,Math.round(Math.hypot(bx-ax,by-ay)*1.5)), cy=C();
+  const L=Math.hypot((P.B[0]-P.A[0])*KX,(P.B[1]-P.A[1])*KY);
+  const d=new Float32Array(n), rel=new Float32Array(n), saw=new Float32Array(n), co=new Float32Array(n), ok=new Uint8Array(n); let r0=null;
+  for(let k=0;k<n;k++){ const t=k/(n-1), j=Math.min(M.w-1,Math.max(0,Math.round(ax+t*(bx-ax)))), i=Math.min(M.h-1,Math.max(0,Math.round(ay+t*(by-ay)))), q=i*M.w+j;
+    if(r0===null) r0=los[q]; d[k]=t*L; rel[k]=los[q]-r0; co[k]=coh[q]; ok[k]=cc[q]>0;
+    saw[k]=((rel[k]+cy/2)%cy+cy)%cy-cy/2; }
+  const jumps=[]; for(let k=1;k<n;k++){ const dj=saw[k]-saw[k-1]; if(Math.abs(dj)>cy/2) jumps.push({k, s:-Math.sign(dj)}); }
+  return {n,d,rel,saw,co,ok,jumps,L,cy};
+}
+function totals(){ const t=new Float32Array(prof.n); let c=0, J=0; const js=prof.jumps;
+  for(let k=0;k<prof.n;k++){ while(J<js.length&&js[J].k<=k){ if(marks.has(js[J].k)) c+=js[J].s; J++; } t[k]=prof.saw[k]+c*prof.cy; } return t; }
+const pc=$('prof'), pg=pc.getContext('2d'); const PL=64, PR=18, T1=26, H1=130, T2=200, H2=226;
+let hover=null;
+function drawProfile(){
+  if(!prof) return; const W=pc.width, H=pc.height, cy=prof.cy, X=v=>PL+v/prof.L*(W-PL-PR);
+  pg.clearRect(0,0,W,H); pg.fillStyle=css('--panel'); pg.fillRect(0,0,W,H);
+  pg.fillStyle=css('--band'); for(let k=0;k<prof.n;k++) if(prof.co[k]<0.3){ const x=X(prof.d[k]); pg.fillRect(x-1,T1,(W-PL-PR)/prof.n+2,H1); pg.fillRect(x-1,T2,(W-PL-PR)/prof.n+2,H2); }
+  const Y1=v=>T1+(cy/2-v)/cy*H1;
+  pg.strokeStyle=css('--rule'); pg.lineWidth=1; pg.font='12px Archivo, sans-serif'; pg.fillStyle=css('--muted');
+  [-cy/2,0,cy/2].forEach(v=>{ pg.beginPath(); pg.moveTo(PL,Y1(v)); pg.lineTo(W-PR,Y1(v)); pg.stroke(); pg.fillText((v<0?'−':v>0?'+':'')+Math.abs(v).toFixed(2),8,Y1(v)+4); });
+  pg.fillStyle=css('--ink'); pg.font='600 13px Archivo, sans-serif'; pg.fillText('What the interferogram stores: a reading that restarts every '+cy.toFixed(2)+' cm',PL,T1-9);
+  pg.strokeStyle=css('--muted'); pg.lineWidth=1.2; pg.beginPath(); for(let k=0;k<prof.n;k++){ const x=X(prof.d[k]), y=Y1(prof.saw[k]); if(k&&Math.abs(prof.saw[k]-prof.saw[k-1])>cy/2) pg.moveTo(x,y); else k?pg.lineTo(x,y):pg.moveTo(x,y); } pg.stroke();
+  prof.jumps.forEach(j=>{ const x=(X(prof.d[j.k])+X(prof.d[j.k-1]))/2; if(marks.has(j.k)){ pg.strokeStyle=css('--los'); pg.lineWidth=2; pg.beginPath(); pg.moveTo(x,T1); pg.lineTo(x,T1+H1); pg.stroke(); pg.fillStyle=css('--los'); pg.font='700 11px Archivo, sans-serif'; pg.textAlign='center'; pg.fillText(j.s>0?'+1':'−1',x,T1+H1+13); pg.textAlign='left'; } });
+  const tot=totals(); let lo=0, hi=0; for(let k=0;k<prof.n;k++){ lo=Math.min(lo,tot[k],prof.ok[k]?prof.rel[k]:0); hi=Math.max(hi,tot[k],prof.ok[k]?prof.rel[k]:0); }
+  lo=Math.floor((lo-3)/10)*10; hi=Math.ceil((hi+3)/10)*10; const Y2=v=>T2+(hi-v)/(hi-lo)*H2, step=(hi-lo)>120?40:(hi-lo)>60?20:10;
+  pg.strokeStyle=css('--rule'); pg.fillStyle=css('--muted'); pg.font='12px Archivo, sans-serif';
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){ pg.beginPath(); pg.moveTo(PL,Y2(v)); pg.lineTo(W-PR,Y2(v)); pg.stroke(); pg.fillText((v<0?'−':v>0?'+':'')+Math.abs(v),20,Y2(v)+4); }
+  pg.fillStyle=css('--ink'); pg.font='600 13px Archivo, sans-serif'; pg.fillText('Restarts counted and added: change in distance relative to A (cm, + toward the satellite)',PL,T2-9);
+  pg.strokeStyle=css('--track'); pg.lineWidth=2.4; pg.beginPath(); let pen=false; for(let k=0;k<prof.n;k++){ if(!prof.ok[k]){pen=false; continue;} const x=X(prof.d[k]), y=Y2(prof.rel[k]); pen?pg.lineTo(x,y):pg.moveTo(x,y); pen=true; } pg.stroke();
+  pg.strokeStyle=css('--los'); pg.lineWidth=1.6; pg.beginPath(); for(let k=0;k<prof.n;k++){ const x=X(prof.d[k]), y=Y2(tot[k]); k?pg.lineTo(x,y):pg.moveTo(x,y); } pg.stroke();
+  pg.fillStyle=css('--muted'); pg.font='12px Archivo, sans-serif';
+  for(let v=0;v<=prof.L;v+=10){ pg.fillText(v+(v?'':' km'),X(v)-6,H-10); }
+  pg.font='700 13px Archivo, sans-serif'; pg.fillStyle=css('--ink'); pg.fillText('A',PL-14,T2+H2+4); pg.fillText('B',W-PR+4,T2+H2+4);
+  pg.font='600 12px Archivo, sans-serif'; pg.textAlign='right'; [['your count','--los',W-PR],['ARIA unwrapped (SNAPHU)','--track',W-PR-110]].forEach(([t,c,x])=>{ pg.fillStyle=css(c); pg.fillText(t,x,T2-9); const w=pg.measureText(t).width; pg.fillRect(x-w-24,T2-14,18,3); }); pg.textAlign='left';
+  if(hover!=null){ const x=X(prof.d[hover]); pg.strokeStyle=css('--faint'); pg.setLineDash([3,3]); pg.lineWidth=1; pg.beginPath(); pg.moveTo(x,T1); pg.lineTo(x,T2+H2); pg.stroke(); pg.setLineDash([]);
+    $('hx').textContent=prof.d[hover].toFixed(1)+' km'; $('hw').textContent=fcm(prof.saw[hover]); $('hy').textContent=fcm(tot[hover]); $('hu').textContent=prof.ok[hover]?fcm(prof.rel[hover]):'not unwrapped'; }
+  const net=[...marks].reduce((s,k)=>s+(prof.jumps.find(j=>j.k===k)||{s:0}).s,0), e=prof.n-1;
+  $('nm').textContent=marks.size; $('nb').textContent=(net>0?'+':net<0?'−':'')+Math.abs(net); $('tb').textContent=fcm(tot[e]); $('ub').textContent=prof.ok[e]?fcm(prof.rel[e]):'n/a';
+  showGuess(tot);
+}
+function showGuess(tot){ if(!guess){ $('pres').textContent=''; return; }
+  const i0=prof.co.findIndex(v=>v<0.3); if(i0<1){ $('pres').textContent='Your guess: '+guess.n+' fringes. This profile has no gray band.'; return; }
+  let c=0; prof.jumps.forEach(j=>{ if(j.k<i0&&marks.has(j.k)) c+=j.s; });
+  const all=prof.jumps.filter(j=>j.k<i0).reduce((s,j)=>s+j.s,0);
+  $('pres').innerHTML=`Your guess: ${guess.n} fringes ${guess.d>0?'toward':'away'}. Your count so far: ${Math.abs(c)} ${c>=0?'toward':'away'}`+(marks.size? `. Restarts between A and the band: ${Math.abs(all)} ${all>=0?'toward':'away'} (${fcm(prof.rel[i0-1])}).`:'.'); }
+function update(){ prof=sampleProfile(); marks=new Set(); hover=null; base=null; $('cycl').textContent=C().toFixed(2)+' cm'; drawMap(); drawProfile(); $('msg').textContent=''; }
+// interaction: profile clicks
+function pxX(e,c){ const r=c.getBoundingClientRect(); return [(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]; }
+pc.addEventListener('pointermove',e=>{ if(!prof)return; const [x]=pxX(e,pc), W=pc.width; const d=(x-PL)/(W-PL-PR)*prof.L; if(d<0||d>prof.L){hover=null;} else { let k=0; while(k<prof.n-1&&prof.d[k]<d)k++; hover=k; } drawProfile(); drawMap(); });
+pc.addEventListener('pointerleave',()=>{ hover=null; drawProfile(); drawMap(); });
+pc.addEventListener('click',e=>{ if(!prof)return; const [x]=pxX(e,pc), W=pc.width, X=v=>PL+v/prof.L*(W-PL-PR);
+  let best=null, bd=1e9; prof.jumps.forEach(j=>{ const jx=(X(prof.d[j.k])+X(prof.d[j.k-1]))/2, dd=Math.abs(jx-x); if(dd<bd){bd=dd;best=j;} });
+  if(!best||bd>9){ $('msg').textContent='No restart within reach of that click: the reading is continuous there.'; return; }
+  if(marks.has(best.k)) marks.delete(best.k); else marks.add(best.k);
+  $('msg').textContent=prof.co[best.k]<0.3? 'That restart is in a low-coherence column: it may be noise, not motion.' : ''; drawProfile(); });
+// interaction: drag A and B on the map
+(function(){ let drag=null;
+  mc.addEventListener('pointerdown',e=>{ const [x,y]=pxX(e,mc); for(const k of ['A','B']){ const [px,py]=toPx(...P[k]); if(Math.hypot(px-x,py-y)<18){ drag=k; mc.setPointerCapture(e.pointerId); return; } } });
+  mc.addEventListener('pointermove',e=>{ if(!drag)return; const [x,y]=pxX(e,mc); const cx=Math.min(mc.width-2,Math.max(2,x)), cy=Math.min(mc.height-2,Math.max(2,y)); P[drag]=toLL(cx,cy); prof=sampleProfile(); marks=new Set(); drawMap(); drawProfile(); });
+  mc.addEventListener('pointerup',()=>{ drag=null; });
+})();
+$('wav').addEventListener('input',update); $('mask').addEventListener('input',()=>{ base=null; drawMap(); });
+$('auto').onclick=()=>{ marks=new Set(prof.jumps.map(j=>j.k)); $('msg').textContent='Every jump larger than half a fringe is counted, noise included.'; drawProfile(); };
+$('clear').onclick=()=>{ marks=new Set(); $('msg').textContent=''; drawProfile(); };
+$('reset').onclick=()=>{ P={A:A0.slice(),B:B0.slice()}; update(); };
+$('plock').onclick=()=>{ const n=+$('pn').value, d=+$('pd').value; if(!$('pn').value||!d){ $('pres').textContent='Enter a number and a direction first.'; return; } guess={n,d}; $('pn').disabled=$('pd').disabled=$('plock').disabled=true; drawProfile(); };
+$('cycS1').textContent=(LAM.s1/2*100).toFixed(2)+' cm';
+init();
+</script>
+</body>
+</html>

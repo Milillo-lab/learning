@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase Clock</title>
+<meta name="description" content="Interactive: the interferometric phase as a clock with one hand, for six radars at once (Sentinel-1, NISAR L and S band, COSMO-SkyMed, TerraSAR-X, BIOMASS). Predict where each hand stops, move the ground, and see why a reading gives the position within one half wavelength but not how many half wavelengths. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --ghost:#9AA4AE; --face:#FFFFFF; --pred:#6A3FB5;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --ghost:#5E6B78; --face:#151C25; --pred:#B79BF0;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --ghost:#5E6B78; --face:#151C25; --pred:#B79BF0;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1040px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block; max-width:100%; overflow-x:auto}
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:12px}
+.ctl{display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:end}
+@media (max-width:760px){ .ctl{grid-template-columns:1fr} }
+.dials{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:14px}
+@media (max-width:760px){ .dials{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:440px){ .dials{grid-template-columns:1fr} }
+.dial{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:10px 10px 8px}
+.dial h3{margin:0; font-size:15px}
+.dial .sub{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.04em; color:var(--muted)}
+.dial canvas{width:100%; height:auto; display:block; margin-top:4px; cursor:default}
+.dial.pick canvas{cursor:crosshair}
+.dial .rd{font-size:13px; color:var(--ink); min-height:40px}
+.dial .rd b{font-family:"JetBrains Mono",monospace; font-weight:600}
+canvas.ruler{width:100%; height:auto; display:block; border-radius:8px; background:var(--panel-2)}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select,input[type=number]{font:inherit; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+input[type=number]{width:110px}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+button.act{font:inherit; font-size:13px; margin:10px 6px 0 0; padding:7px 11px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+button.act:hover{border-color:var(--track)}
+button.act.go{background:var(--los); border-color:var(--los); color:#fff}
+button.act:disabled{opacity:.45; cursor:default}
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px; color:var(--ink)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+.predict{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--los); border-radius:8px; padding:10px 13px; margin:12px 0; font-size:14.5px}
+.predict .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--los); margin-bottom:3px}
+.big{font-size:22px; font-weight:600}
+.tabwrap{overflow-x:auto; margin:12px 0}
+table.tab{border-collapse:collapse; font-size:14px; min-width:min(100%,640px)}
+table.tab th,table.tab td{border-bottom:1px solid var(--rule-soft); padding:6px 10px; text-align:right; white-space:nowrap}
+table.tab th{font-size:12px; color:var(--muted); font-weight:600}
+table.tab td:first-child,table.tab th:first-child{text-align:left}
+table.src td{white-space:normal; text-align:left; font-size:13px; vertical-align:top}
+table.src td:nth-child(2),table.src td:nth-child(3){white-space:nowrap; text-align:right}
+.doit{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--track); border-radius:8px; padding:9px 13px; margin:12px 0; font-size:14.5px; max-width:70ch}
+.doit .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--track); margin-bottom:3px}
+ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:70ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.key{display:inline-block; width:18px; height:3px; margin:0 4px 3px 10px; vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Phase clock</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>A clock with one hand, six radars</h1>
+  <p class="lede">The phase of a radar echo works like a clock with one hand. Between two passes, ground motion turns the hand, and one full turn stands for half a wavelength. The radar reads where the hand stopped but not how many times it went round. Move the ground once and watch six radars read it, each with its own clock.</p>
+
+  <h2>The idea in one equation</h2>
+  <p class="serif">If the ground moves a distance <i>d</i> along the line of sight between two passes, the round trip of the wave changes by 2<i>d</i>, and the phase turns by</p>
+  <div class="eq">Δφ = 4π d / λ,&nbsp;&nbsp;&nbsp; one turn (2π) for d = λ/2,&nbsp;&nbsp;&nbsp; λ = c / f</div>
+  <p class="serif">The radar measures Δφ only modulo one turn. It reads the fraction of a turn, not the number of whole turns. The length of a turn, λ/2, is set by the radar's center frequency <i>f</i>: 2.77 cm for Sentinel-1 at C band, 34.46 cm for BIOMASS at P band. Here the hand turns clockwise as the ground moves away from the satellite, starting at twelve o'clock on the first pass, and the colors around each dial follow the color cycle of an interferogram.</p>
+
+  <h2>Predict, then reveal</h2>
+  <div class="predict"><span class="k">Round <span id="rn">1</span></span>
+    Between the two passes the ground moves <span class="big" id="cm">2.0 cm</span> away from the satellite. Before you see any hand: click on each dial where you think its hand stops. Use the frequency under each name. When all six dials hold a purple guess, press Reveal.
+    <div><button class="act go" id="reveal" disabled>Reveal</button><button class="act" id="next">New round</button><button class="act" id="explore">Skip to free exploration</button></div>
+    <div id="score" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card" id="ctlcard" style="display:none">
+    <div class="ctl"><div>
+      <label>Ground motion away from the satellite <span class="val" id="dv"></span></label>
+      <input type="range" id="d" min="0" max="40" step="0.01" value="0">
+    </div><div>
+      <label>Type a motion (cm)</label>
+      <input type="number" id="dn" min="0" max="40" step="0.01" value="0">
+      <button class="act" id="play">Play 0 to 6 cm</button>
+    </div></div>
+    <div class="chk"><input type="checkbox" id="turns"><label for="turns" style="margin:0">show the whole turns, which the radar cannot see</label></div>
+  </div>
+
+  <div class="dials" id="dials"></div>
+  <div class="cap">Gray hand: first pass. Black hand: second pass. Orange arc: what the radar measures. Purple dashed hand: your guess. <span id="pickhint"></span></div>
+
+  <h2>The same motion on six rulers</h2>
+  <p class="serif">Unroll each clock into a tape that repeats every half wavelength. The ground's position (the black mark) falls inside one segment. The color under the mark is what the interferogram shows, and its position inside the segment is what the radar reads. Which segment it is, the radar cannot tell: from the reading alone, every segment is equally possible.</p>
+  <div class="card">
+    <label style="margin-top:0">Length of tape shown <span class="val" id="spv"></span></label>
+    <select id="span"><option value="6">0 to 6 cm</option><option value="15" selected>0 to 15 cm</option><option value="40">0 to 40 cm</option></select>
+    <canvas class="ruler" id="ruler" width="980" height="430" style="margin-top:10px"></canvas>
+    <div class="cap">Each segment holds one full color cycle and is λ/2 long. Small ticks below the black mark: the other positions that give the same reading.</div>
+  </div>
+
+  <h2>Compare the six</h2>
+  <div class="tabwrap"><table class="tab" id="cmp"></table></div>
+  <p class="serif">A radar with a short half wavelength turns its hand fast: it resolves small motions finely, but it wraps sooner, and a motion of a few centimeters between neighboring pixels is already ambiguous. A radar with a long half wavelength turns it slowly: each centimeter moves the hand less, so the same phase noise means more centimeters of error, but the count is harder to lose. Longer waves also keep their phase better through vegetation, which this page does not show.</p>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>Set the motion to 2.77 cm. Which hand is back at twelve o'clock, and which hands are not? For which radar does the same motion look like no motion at all?</li>
+    <li>Set 12.10 cm: the NISAR L-band hand is back at twelve o'clock. Where is the Sentinel-1 hand, and how many turns did it make? How could two radars with different wavelengths, reading the same motion, help you count turns that neither can count alone?</li>
+    <li>COSMO-SkyMed and TerraSAR-X both work at X band, 9.60 and 9.65 GHz. At 1 cm their hands nearly agree. How far must the ground move before they differ by 10°? By a quarter turn? (The second answer is beyond the slider: compute it from the table.)</li>
+    <li>Suppose each radar reads its hand to within 10° of phase noise. Convert that to millimeters of motion for each of the six, using the last column of the table. Which radar measures one centimeter most finely, and which is least likely to lose count?</li>
+    <li>On the rulers, set 15 cm. For Sentinel-1, list three other motions that give exactly the same reading. Which of the six radars would tell them apart?</li>
+  </ol>
+
+  <h2>Frequencies and sources</h2>
+  <p class="serif">Each wavelength is computed on the page as λ = c / f, with c = 299,792,458 m/s, from the center frequency in the mission's documentation.</p>
+  <div class="tabwrap"><table class="tab src">
+    <tr><th>Radar</th><th>Center frequency</th><th>λ</th><th>Source</th></tr>
+    <tr><td>Sentinel-1, C band (ESA)</td><td>5.405 GHz</td><td id="l0"></td><td>Copernicus SentiWiki, <a href="https://sentiwiki.copernicus.eu/web/s1-mission">S1 Mission</a>, Table 2.</td></tr>
+    <tr><td>NISAR, L band (NASA)</td><td>1239 MHz</td><td id="l1"></td><td>Frequency A of the 40+5 MHz mode, ASF <a href="https://nisar-docs.asf.alaska.edu/nisar-intro/">NISAR Data User Guide</a>, Table 1. The L-band allocation runs from 1215 to 1300 MHz, and the center frequency depends on the mode, from 1221.5 to 1257.5 MHz for frequency A; the <a href="https://assets.science.nasa.gov/content/dam/science/missions/nisar/nisar-jpl/pdf/NISAR_FINAL_9-6-19.pdf">NISAR Science Users' Handbook</a> (2019), Table 4-3, gives the band as 1.257 GHz ± 40 MHz.</td></tr>
+    <tr><td>NISAR, S band (ISRO)</td><td>3.2 GHz</td><td id="l2"></td><td>ISRO Space Applications Centre, <a href="https://www.sac.gov.in/data/Event/524/NISAR_Utilization_Programme_Jul_2023.pdf">NISAR Utilization Programme</a> (2023), Table 1: 3.2 GHz ± 37.5 MHz; the same value is in the NISAR handbook, Table 4-3.</td></tr>
+    <tr><td>COSMO-SkyMed, X band (ASI)</td><td>9.6 GHz</td><td id="l3"></td><td>ESA Earth Online, <a href="https://earth.esa.int/eogateway/missions/cosmo-skymed">COSMO-SkyMed mission page</a>. The ASI product documents available online name the radar frequency field but do not state its value.</td></tr>
+    <tr><td>TerraSAR-X, X band (DLR)</td><td>9.65 GHz</td><td id="l4"></td><td>DLR, <a href="https://sss.terrasar-x.dlr.de/docs/TX-GS-DD-3302.pdf">TerraSAR-X Basic Product Specification</a>, TX-GS-DD-3302, Issue 1.9, Table 2-1.</td></tr>
+    <tr><td>BIOMASS, P band (ESA)</td><td>435 MHz</td><td id="l5"></td><td>ESA Earth Online, <a href="https://earth.esa.int/eogateway/missions/biomass/description">Biomass mission description</a>: 435 MHz with a 6 MHz bandwidth.</td></tr>
+  </table></div>
+  <p class="serif">Sentinel-1 products record the wavelength in their metadata: the ARIA Ridgecrest product used on the companion pages gives 5.5466 cm, the value computed here. Several pages round these wavelengths differently (24 cm for NISAR L band, 9 to 10 cm for S band, 70 cm for BIOMASS); the page keeps the computed values to two decimals so that the comparisons stay exact.</p>
+
+  <h2>Why the page asks you to guess first</h2>
+  <p class="serif">Predicting before you see the answer exposes what you expected, and a wrong guess tested against a simulation is a strong prompt to revise it. Comparing several cases side by side, instead of one at a time, helps you see which feature matters (here, the half wavelength) and carry it to a new radar. Both strategies are recommended by Ambrose et al. (2023), <i>How Learning Works</i>, 2nd edition: predictions tested with computer simulations in Chapter 2, structured comparisons for transfer in Chapter 5.</p>
+
+  <h2>Read more</h2>
+  <p class="serif">Ferretti, A. (2014). <i>Satellite InSAR Data: Reservoir Monitoring from Space</i>. EAGE Education Tour Series 9. EAGE Publications. Section 2.2.2.<br>
+  Massonnet, D., Feigl, K.L. (1998). Radar interferometry and its application to changes in the Earth's surface. <i>Reviews of Geophysics</i> 36(4), 441–500. <a href="https://doi.org/10.1029/97RG03139">doi:10.1029/97RG03139</a><br>
+  Ambrose, S.A., Bridges, M.W., DiPietro, M., Lovett, M.C., Norman, M.K. (2023). <i>How Learning Works: Eight Research-Based Principles for Smart Teaching</i>, 2nd ed. Jossey-Bass.<br>
+  Companion pages: <a href="../insar-counting-fringes/">Counting fringes at Ridgecrest</a> · <a href="../insar-line-of-sight/">Line of sight</a> · <a href="../insar-phasors-in-a-pixel/">Phasors in a pixel</a></p>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, University of Houston, and for Radar, Explained #2, after the phase-clock figure of that post and Ferretti (2014). Motion is along each radar's line of sight; the page treats every radar as if it viewed the ground from the same direction, which real orbits do not.</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} draw();};
+
+const CLIGHT=299792458;
+const SENS=[ // name, band, center frequency (Hz); sources in the table on the page
+  {n:'Sentinel-1', b:'C band', f:5.405e9},
+  {n:'NISAR L', b:'L band', f:1.239e9},
+  {n:'NISAR S', b:'S band', f:3.2e9},
+  {n:'COSMO-SkyMed', b:'X band', f:9.6e9},
+  {n:'TerraSAR-X', b:'X band', f:9.65e9},
+  {n:'BIOMASS', b:'P band', f:435e6}];
+SENS.forEach(s=>{ s.lam=CLIGHT/s.f*100; s.half=s.lam/2; });   // cm
+const ROUNDS=[2.0,0.7,1.4,3.5,5.0,1.0,6.0,12.1,8.0,0.5];
+let mode='predict', round=0, motion=ROUNDS[0], guess=SENS.map(()=>null), revealed=false;
+const $=id=>document.getElementById(id), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtF=f=>f>=1e9? (f/1e9).toFixed(f%1e7?4:3).replace(/0+$/,'').replace(/\.$/,'')+' GHz' : (f/1e6).toFixed(0)+' MHz';
+function hsv(p){const h=p*6,i=Math.floor(h)%6,f=h-Math.floor(h),q=1-f,t=f; const c=[[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i]; return `rgb(${c.map(v=>Math.round(255*v)).join(',')})`;}
+const ang=fr=>-Math.PI/2+2*Math.PI*fr;   // canvas angle for a fraction of a turn clockwise from 12 o'clock
+// build the dial cards
+$('dials').innerHTML=SENS.map((s,i)=>`<div class="dial" id="card${i}"><h3>${s.n}</h3><div class="sub">${s.b} · ${fmtF(s.f)} · one turn = ${s.half.toFixed(2)} cm</div><canvas id="c${i}" width="300" height="300"></canvas><div class="rd" id="r${i}"></div></div>`).join('');
+function dial(i,fr,showHand){
+  const c=$('c'+i), g=c.getContext('2d'), W=c.width, R=W*0.35, cx=W/2, cy=W/2+4, s=SENS[i]; g.clearRect(0,0,W,W);
+  const n=120; for(let k=0;k<n;k++){ g.beginPath(); g.arc(cx,cy,R,ang(k/n)-0.003,ang((k+1)/n)+0.003); g.arc(cx,cy,R*0.84,ang((k+1)/n)+0.003,ang(k/n)-0.003,true); g.closePath(); g.fillStyle=hsv(k/n); g.fill(); }
+  g.beginPath(); g.arc(cx,cy,R*0.84,0,2*Math.PI); g.fillStyle=css('--face'); g.fill();
+  g.font='12px Archivo, sans-serif'; g.fillStyle=css('--muted');
+  [[0,'0 = '+s.half.toFixed(2)],[0.25,(s.half/4).toFixed(2)],[0.5,(s.half/2).toFixed(2)],[0.75,(3*s.half/4).toFixed(2)]].forEach(([f,t])=>{ const a=ang(f);
+    g.strokeStyle=css('--muted'); g.lineWidth=1.5; g.beginPath(); g.moveTo(cx+R*0.74*Math.cos(a),cy+R*0.74*Math.sin(a)); g.lineTo(cx+R*0.84*Math.cos(a),cy+R*0.84*Math.sin(a)); g.stroke();
+    g.textAlign=f===0||f===0.5?'center':f===0.25?'left':'right'; const rr=R*1.07; g.fillText(t,cx+rr*Math.cos(a)+(f===0.25?2:f===0.75?-2:0),cy+rr*Math.sin(a)+(f===0?-3:f===0.5?12:4)); });
+  g.textAlign='left';
+  if(showHand&&fr>0.002&&fr<0.998){ g.beginPath(); g.arc(cx,cy,R*0.62,ang(0),ang(fr)); g.arc(cx,cy,R*0.57,ang(fr),ang(0),true); g.closePath(); g.fillStyle=css('--los'); g.fill(); }
+  const hand=(f,col,w,dash)=>{ const a=ang(f); g.save(); g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; if(dash)g.setLineDash(dash); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+R*0.8*Math.cos(a),cy+R*0.8*Math.sin(a)); g.stroke(); g.restore(); };
+  hand(0,css('--ghost'),5);
+  if(guess[i]!=null) hand(guess[i],css('--pred'),3.5,[7,5]);
+  if(showHand){ hand(fr,css('--ink'),5); const a=ang(fr); g.beginPath(); g.arc(cx+R*0.8*Math.cos(a),cy+R*0.8*Math.sin(a),R*0.07,0,2*Math.PI); g.fillStyle=hsv(fr); g.fill(); g.strokeStyle=css('--ink'); g.lineWidth=1.2; g.stroke(); }
+  g.beginPath(); g.arc(cx,cy,R*0.05,0,2*Math.PI); g.fillStyle=css('--ink'); g.fill();
+}
+const frac=(d,s)=>{ const t=d/s.half; return t-Math.floor(t+1e-9); };
+const turnsOf=(d,s)=>Math.floor(d/s.half+1e-9);
+function angDiff(a,b){ let x=((a-b)%1+1.5)%1-0.5; return x*360; }
+function draw(){
+  const showHand= mode==='explore'||revealed, d=motion, showT=$('turns').checked||mode==='predict';
+  SENS.forEach((s,i)=>{ const fr=frac(d,s); dial(i,fr,showHand); const r=$('r'+i);
+    if(!showHand){ r.innerHTML= guess[i]==null? '<span style="color:var(--faint)">Click the dial to place your guess.</span>' : `Your guess: <b>${(guess[i]*360).toFixed(0)}°</b>, that is <b>${(guess[i]*s.half).toFixed(2)} cm</b> into a turn.`; return; }
+    let h=`Reads <b>${Math.round(fr*360)%360}°</b> = <b>${(fr*s.half).toFixed(2)} cm</b> into a turn`;
+    h+= showT? `, after <b>${turnsOf(d,s)}</b> whole turn${turnsOf(d,s)===1?'':'s'}.` : ', plus an unknown number of whole turns.';
+    if(guess[i]!=null&&mode==='predict') h+=`<br>Your guess was ${(guess[i]*360).toFixed(0)}°, off by ${Math.abs(angDiff(guess[i],fr)).toFixed(0)}°.`;
+    r.innerHTML=h; $('card'+i).classList.toggle('pick',mode==='predict'&&!revealed); });
+  SENS.forEach((s,i)=>$('card'+i).classList.toggle('pick',mode==='predict'&&!revealed));
+  $('pickhint').textContent= mode==='predict'&&!revealed? 'Click a dial to place or move your guess.' : '';
+  $('reveal').disabled=!(mode==='predict'&&!revealed&&guess.every(g=>g!=null));
+  $('dv').textContent=d.toFixed(2)+' cm';
+  ruler(); table();
+}
+function ruler(){
+  const c=$('ruler'), g=c.getContext('2d'), W=c.width, H=c.height, L=150, Rm=16, span=+$('span').value, X=v=>L+v/span*(W-L-Rm), rowH=(H-40)/SENS.length;
+  g.clearRect(0,0,W,H); const showHand= mode==='explore'||revealed, d=motion, showT=$('turns').checked;
+  $('spv').textContent='';
+  SENS.forEach((s,i)=>{ const y=10+i*rowH, th=rowH*0.42;
+    g.fillStyle=css('--ink'); g.font='600 13px Archivo, sans-serif'; g.fillText(s.n,8,y+th*0.75); g.font='11px Archivo, sans-serif'; g.fillStyle=css('--muted'); g.fillText('λ/2 = '+s.half.toFixed(2)+' cm',8,y+th*0.75+15);
+    const nseg=Math.ceil(span/s.half);
+    for(let k=0;k<nseg;k++){ const x0=X(k*s.half), x1=X(Math.min(span,(k+1)*s.half)), w=X((k+1)*s.half)-x0;
+      const gr=g.createLinearGradient(x0,0,x0+w,0); for(let q=0;q<=6;q++) gr.addColorStop(q/6,hsv((q/6)%1)); g.fillStyle=gr; g.fillRect(x0,y,x1-x0,th);
+      g.strokeStyle=css('--panel'); g.lineWidth=1.2; g.beginPath(); g.moveTo(x0,y); g.lineTo(x0,y+th); g.stroke();
+      if(showT&&showHand&&w>16){ g.fillStyle=css('--muted'); g.font='10px Archivo, sans-serif'; g.fillText(String(k),x0+3,y+th+11); } }
+    if(showHand){ const fr=frac(d,s);
+      for(let k=0;k*s.half<=span;k++){ const v=k*s.half+fr*s.half; if(v>span)break; const x=X(v); g.strokeStyle=css('--muted'); g.lineWidth=1; g.beginPath(); g.moveTo(x,y+th); g.lineTo(x,y+th+6); g.stroke(); }
+      if(d<=span){ const x=X(d); g.fillStyle=css('--ink'); g.fillRect(x-1.5,y-4,3,th+8); g.beginPath(); g.moveTo(x-6,y-9); g.lineTo(x+6,y-9); g.lineTo(x,y-2); g.fill(); }
+      else { g.fillStyle=css('--los'); g.font='600 11px Archivo, sans-serif'; g.textAlign='right'; g.fillText('motion beyond the tape →',W-Rm,y-2); g.textAlign='left'; } }
+  });
+  const yb=H-18; g.strokeStyle=css('--muted'); g.lineWidth=1; g.beginPath(); g.moveTo(L,yb); g.lineTo(W-Rm,yb); g.stroke(); g.fillStyle=css('--muted'); g.font='12px Archivo, sans-serif';
+  const st=span<=6?1:span<=15?2.5:5; for(let v=0;v<=span+1e-9;v+=st){ const x=X(v); g.beginPath(); g.moveTo(x,yb); g.lineTo(x,yb+5); g.stroke(); g.textAlign='center'; g.fillText(v+(v===0?'':''),x,yb+16); } g.textAlign='left'; g.fillText('cm',W-Rm-14,yb-4);
+}
+function table(){
+  const showHand= mode==='explore'||revealed, d=motion, showT=$('turns').checked;
+  $('cmp').innerHTML='<tr><th>Radar</th><th>f</th><th>λ (cm)</th><th>λ/2: one turn (cm)</th><th>turns for '+d.toFixed(2)+' cm</th><th>reading</th><th>mm per 10° of phase</th></tr>'+
+    SENS.map(s=>{ const t=d/s.half; return `<tr><td>${s.n}</td><td>${fmtF(s.f)}</td><td>${s.lam.toFixed(2)}</td><td>${s.half.toFixed(2)}</td><td>${showHand? t.toFixed(2):'?'}</td><td>${showHand? Math.round(frac(d,s)*360)%360+'°':'?'}</td><td>${(s.half*10/360*10).toFixed(2)}</td></tr>`; }).join('');
+  SENS.forEach((s,i)=>$('l'+i).textContent=s.lam.toFixed(2)+' cm');
+}
+// predict mode: click a dial to place the guess
+SENS.forEach((s,i)=>$('c'+i).addEventListener('click',e=>{ if(mode!=='predict'||revealed) return; const c=$('c'+i), r=c.getBoundingClientRect();
+  const x=(e.clientX-r.left)*c.width/r.width-c.width/2, y=(e.clientY-r.top)*c.height/r.height-(c.width/2+4); let f=(Math.atan2(y,x)+Math.PI/2)/(2*Math.PI); f=(f%1+1)%1; guess[i]=f; draw(); }));
+$('reveal').onclick=()=>{ revealed=true; const errs=SENS.map((s,i)=>Math.abs(angDiff(guess[i],frac(motion,s))));
+  const best=errs.indexOf(Math.min(...errs)), worst=errs.indexOf(Math.max(...errs));
+  const wrapped=SENS.filter(s=>turnsOf(motion,s)>0).map(s=>s.n+' ('+turnsOf(motion,s)+')');
+  $('score').innerHTML=`Closest: ${SENS[best].n} (off by ${errs[best].toFixed(0)}°). Farthest: ${SENS[worst].n} (off by ${errs[worst].toFixed(0)}°). `+
+    (wrapped.length? `Hands that went all the way round at least once, with the number of whole turns: ${wrapped.join(', ')}. Their readings alone would not tell you so.` : 'No hand completed a whole turn this time.'); draw(); };
+$('next').onclick=()=>{ round++; motion=ROUNDS[round%ROUNDS.length]; guess=SENS.map(()=>null); revealed=false; mode='predict'; $('rn').textContent=round+1; $('cm').textContent=motion.toFixed(1)+' cm'; $('score').textContent=''; $('ctlcard').style.display='none'; draw(); };
+$('explore').onclick=()=>{ mode='explore'; revealed=false; guess=SENS.map(()=>null); $('ctlcard').style.display=''; $('d').value=motion; $('dn').value=motion; $('score').textContent='Free exploration: move the slider. Press New round to predict again.'; draw(); };
+function setD(v){ motion=Math.max(0,Math.min(40,v)); $('d').value=motion; $('dn').value=+motion.toFixed(2); draw(); }
+$('d').addEventListener('input',()=>setD(+$('d').value)); $('dn').addEventListener('input',()=>{ if($('dn').value!=='') setD(+$('dn').value); });
+$('turns').addEventListener('input',draw); $('span').addEventListener('input',draw);
+let anim=null; $('play').onclick=()=>{ if(anim){cancelAnimationFrame(anim); anim=null; return;} const t0=performance.now();
+  const step=t=>{ const u=Math.min(1,(t-t0)/8000); setD(6*u); if(u<1) anim=requestAnimationFrame(step); else anim=null; }; anim=requestAnimationFrame(step); };
+draw();
+</script>
+</body>
+</html>

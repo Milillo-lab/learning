@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line of Sight</title>
+<meta name="description" content="Interactive: project a 3D ground motion (east, north, up) onto the line of sight of an ascending and a descending radar pass. Change the incidence angle and the heading, read the three projection weights, and watch a synthetic interferogram for each pass. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --track:#0D6379; --asc:#0D6379; --desc:#A9500F; --up:#3C8D2F; --axis:#B9C3CE; --ghost:#9AA5B1;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --asc:#4BC6DD; --desc:#F0A143; --up:#7CC96A; --axis:#34404D; --ghost:#5E6B78;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833; --los:#F0A143; --track:#4BC6DD; --asc:#4BC6DD; --desc:#F0A143; --up:#7CC96A; --axis:#34404D; --ghost:#5E6B78;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1040px; margin:0 auto; padding:26px 16px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+p{margin:10px 0; max-width:70ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:10px 13px; margin:12px 0; display:inline-block; max-width:100%; overflow-x:auto}
+.app{display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; margin-top:8px}
+@media (max-width:860px){ .app{grid-template-columns:1fr} }
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media (max-width:620px){ .grid2{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:12px}
+.card h3{margin:0 0 6px; font-size:12px; font-family:"JetBrains Mono",monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:500}
+canvas{width:100%; height:auto; display:block; border-radius:8px; background:var(--panel-2)}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+.seg{display:flex; gap:6px; margin-top:4px}
+.seg button{flex:1; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.04em; background:var(--panel-2); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:7px 8px; cursor:pointer}
+.seg button.on{background:var(--track); color:#fff; border-color:var(--track)}
+.seg button.on.d{background:var(--desc); border-color:var(--desc)}
+button.act{font:inherit; font-size:13px; margin:10px 6px 0 0; padding:7px 11px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+button.act:hover{border-color:var(--track)}
+.cap{font-size:11.5px; color:var(--faint); font-style:italic; margin-top:8px}
+.tabwrap{overflow-x:auto; margin:12px 0}
+table.tab{border-collapse:collapse; font-size:14px; min-width:min(100%,460px)}
+table.tab th,table.tab td{border-bottom:1px solid var(--rule-soft); padding:6px 12px; text-align:right; white-space:nowrap}
+table.tab th{font-size:12px; color:var(--muted); font-weight:600}
+table.tab td:first-child,table.tab th:first-child{text-align:left}
+table.tab tr.sum td{border-top:1.5px solid var(--ink); border-bottom:none; font-weight:600}
+.ca{color:var(--asc); font-weight:600} .cd{color:var(--desc); font-weight:600}
+ol.try li{margin:8px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:70ch}
+.foot{margin-top:40px; font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.doit{background:var(--panel-2); border:1px solid var(--rule-soft); border-left:3px solid var(--track); border-radius:8px; padding:9px 13px; margin:12px 0; font-size:14.5px; max-width:70ch}
+.doit .k{display:block; font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--track); margin-bottom:3px}
+.legend{display:flex; align-items:center; gap:10px; font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--muted); margin-top:8px}
+.bar{display:inline-block; width:140px; height:10px; border-radius:3px; border:1px solid var(--rule); background:linear-gradient(90deg,#0ff,#00f,#f0f,#f00,#ff0,#0f0,#0ff)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="crumb"><a href="../index.html">Learning</a> / Line of sight</span>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>One number for three directions</h1>
+  <p class="lede">The ground can move east, north and up at once, but an interferogram records one number per pixel: the change in distance to the satellite. Set a motion in three directions, steer the two passes that look at it, and see how much of each direction reaches the radar.</p>
+
+  <h2>The idea in one equation</h2>
+  <p class="serif">A radar measures the change in its distance to the ground, along its line of sight (LOS). A ground motion with east, north and up parts <i>d</i><sub>E</sub>, <i>d</i><sub>N</sub>, <i>d</i><sub>U</sub> changes that distance by its projection on the unit vector that points from the ground to the satellite. For a radar that looks to the right of its flight path, with heading α (the flight direction, clockwise from north) and incidence angle θ at the ground, the change toward the satellite is</p>
+  <div class="eq">d<sub>LOS</sub> = −sin θ cos α · d<sub>E</sub> + sin θ sin α · d<sub>N</sub> + cos θ · d<sub>U</sub></div>
+  <p class="serif">The three factors are the projection weights. Each says how many centimeters of LOS change one centimeter of motion in that direction produces. Vertical motion always counts with cos θ. Horizontal motion counts with sin θ, split between east and north by the heading. Radar satellites fly near-polar orbits, so α stays close to 0° (north) or 180° (south): at Ridgecrest both Sentinel-1 passes fly within 11° of the north-south line. There sin α is small, and so is the north weight.</p>
+
+  <h2>Simulator</h2>
+  <div class="app">
+    <div>
+      <div class="grid2">
+        <div class="card"><h3>Map view, north up</h3><canvas id="plan" width="360" height="360"></canvas>
+          <div class="cap">Thin arrows: flight direction. Thick arrows: the direction the radar looks. Black arrow: the horizontal part of the motion.</div></div>
+        <div class="card"><h3 id="sidet">Side view, along the look direction</h3><canvas id="side" width="360" height="360"></canvas>
+          <div class="cap">The plane that holds the satellite and the ground point. Gray: the motion in this plane. Orange: its projection on the line of sight, the only part the radar records.</div></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="card"><h3>Ascending pass, synthetic</h3><canvas id="ifa" width="300" height="300"></canvas></div>
+        <div class="card"><h3>Descending pass, synthetic</h3><canvas id="ifd" width="300" height="300"></canvas></div>
+      </div>
+      <div class="legend"><span class="bar"></span><span>one cycle = <span id="cyc"></span> of LOS change</span></div>
+      <div class="cap">A smooth patch of ground, 30 × 30 km, moves by the vector you set at its center and by less toward the edges (a bell shape with a 6 km width). Each pass wraps its own LOS change at half the Sentinel-1 wavelength, as an interferogram does. No noise, no atmosphere.</div>
+    </div>
+    <div class="card">
+      <label>Edit the geometry of</label>
+      <div class="seg" id="passsel"><button data-p="asc" class="on">ascending</button><button data-p="desc" class="d">descending</button></div>
+      <label>Incidence angle θ <span class="val" id="thv"></span></label>
+      <input type="range" id="th" min="20" max="50" step="0.1">
+      <label>Heading α, clockwise from north <span class="val" id="hv"></span></label>
+      <input type="range" id="hd" min="0" max="359.9" step="0.1">
+      <button class="act" id="rc">Ridgecrest geometry (ARIA)</button>
+      <label style="margin-top:18px">East motion d<sub>E</sub> <span class="val" id="ev"></span></label>
+      <input type="range" id="de" min="-10" max="10" step="0.1" value="0">
+      <label>North motion d<sub>N</sub> <span class="val" id="nv"></span></label>
+      <input type="range" id="dn" min="-10" max="10" step="0.1" value="0">
+      <label>Up motion d<sub>U</sub> <span class="val" id="uv"></span></label>
+      <input type="range" id="du" min="-10" max="10" step="0.1" value="1">
+      <div>
+        <button class="act" data-v="0,0,1">1 cm up</button><button class="act" data-v="1,0,0">1 cm east</button><button class="act" data-v="0,1,0">1 cm north</button><button class="act" data-v="0,0,0">zero</button>
+      </div>
+      <div class="tabwrap"><table class="tab" id="wt"></table></div>
+    </div>
+  </div>
+
+  <h2>Which headings hide which motion</h2>
+  <div class="card">
+    <canvas id="wh" width="960" height="300"></canvas>
+    <div class="cap">The three weights against the heading, at the incidence angle of the pass you are editing. Dashed lines: the headings of the two passes. The north weight crosses zero at headings of 0° and 180°, where the satellite flies exactly north or south; the east weight crosses zero at 90° and 270°, headings a near-polar orbit never reaches.</div>
+  </div>
+
+  <h2>The Ridgecrest numbers of Radar, Explained #2</h2>
+  <p class="serif">Radar, Explained #2 says how much of 1 cm of motion the radar records at Ridgecrest, for vertical, east-west and north-south motion. Those numbers come from the descending Sentinel-1 pass of 4 and 16 July 2019 (Figure 1 of the post). The ARIA product of that pair gives, at the center of the scene, an incidence angle of 39.94° and an azimuth angle of −10.40°, the direction from the ground to the satellite measured counterclockwise from east. The heading is 180° minus that angle, 190.40°, a little west of due south. The ascending pair of 4 and 10 July 2019 gives 40.11° and −170.32°, so a heading of 350.32°.</p>
+  <div class="tabwrap"><table class="tab" id="chk"></table></div>
+  <div class="doit"><span class="k">On the page</span>Press Ridgecrest geometry (ARIA), then 1 cm up, 1 cm east and 1 cm north in turn: the weight table of the simulator repeats these values. The east weight changes sign between the passes, because they look from opposite sides. The north weight keeps the same sign, because both passes fly within 11° of the north-south line, one a little west of north and the other a little west of south.</div>
+
+  <h2>Try this</h2>
+  <ol class="try">
+    <li>Set 1 cm north. Before you look at the table, predict: which pass reads more, and with which sign? Now set 5 cm north and count the fringes in each synthetic interferogram. How much north motion would one fringe of Sentinel-1 need?</li>
+    <li>Set 3 cm east. The two passes now show the same pattern with opposite colors. Set 3 cm up instead: the patterns agree. How would you combine an ascending and a descending reading to separate vertical from east-west motion?</li>
+    <li>Set d<sub>E</sub> = 1.2 cm and d<sub>U</sub> = 1 cm. One pass sees almost nothing. Which combination of east and up motion makes the descending pass blind, and why is there always one for each pass?</li>
+    <li>Turn the heading of the descending pass from 190° to 270°, as if the satellite flew west. Which weight grows and which vanishes? What would a radar on such an orbit gain, and what would it lose?</li>
+    <li>Move the incidence angle from 20° to 50°. Which weights grow, which shrink, and which stays proportional to the other?</li>
+  </ol>
+
+  <h2>Read more</h2>
+  <p class="serif">Wright, T.J., Parsons, B.E., Lu, Z. (2004). Toward mapping surface deformation in three dimensions using InSAR. <i>Geophysical Research Letters</i> 31, L01607. <a href="https://doi.org/10.1029/2003GL018827">doi:10.1029/2003GL018827</a><br>
+  Fielding, E.J., et al. (2020). Surface deformation related to the 2019 Mw 7.1 and 6.4 Ridgecrest earthquakes in California from GPS, SAR interferometry, and SAR pixel offsets. <i>Seismological Research Letters</i> 91(4), 2035–2046. <a href="https://doi.org/10.1785/0220190302">doi:10.1785/0220190302</a><br>
+  Hanssen, R.F. (2001). <i>Radar Interferometry: Data Interpretation and Error Analysis</i>. Kluwer. <a href="https://doi.org/10.1007/0-306-47633-9">doi:10.1007/0-306-47633-9</a><br>
+  Companion pages: <a href="../insar-phase-clock/">Phase clock across sensors</a> · <a href="../insar-counting-fringes/">Counting fringes at Ridgecrest</a></p>
+
+  <p class="foot">Built for CIVE 6359, SAR Remote Sensing, University of Houston, and for Radar, Explained #2. Geometry of the Ridgecrest passes from the ARIA Sentinel-1 GUNW products of 4 to 10 July 2019 (ascending, track 64) and 4 to 16 July 2019 (descending, track 71), center-of-scene incidence and azimuth angles; contains modified Copernicus Sentinel data 2019, processed by ESA and ARIA NASA/JPL (ARIA S1-GUNW products, ASF DAAC). Sentinel-1 wavelength, 5.5466 cm, from the same product metadata. The synthetic interferograms are a schematic model, not data.</p>
+</div>
+<script>
+(function(){ try{const t=localStorage.getItem('sargeom-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){} })();
+document.getElementById('theme').onclick=function(){const r=document.documentElement; const cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); const nx=cur==='dark'?'light':'dark'; r.setAttribute('data-theme',nx); try{localStorage.setItem('sargeom-theme',nx);}catch(e){} draw();};
+
+const LAM=0.0554657616, CYC=LAM/2*100;          // Sentinel-1 wavelength (m), ARIA metadata; cm of LOS change per cycle
+const ARIA={asc:{th:40.11417, az:-170.31685}, desc:{th:39.93645, az:-10.39590}};   // center of scene, rc_crop_meta.json
+const G={}; function ridgecrest(){ for(const k in ARIA){ G[k]={th:ARIA[k].th, h:((180-ARIA[k].az)%360+360)%360}; } }
+let cur='asc';
+const $=id=>document.getElementById(id), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(), rad=Math.PI/180;
+function W(g){ const s=Math.sin(g.th*rad), c=Math.cos(g.th*rad); return [-s*Math.cos(g.h*rad), s*Math.sin(g.h*rad), c]; }
+const dot=(w,d)=>w[0]*d[0]+w[1]*d[1]+w[2]*d[2];
+const motion=()=>[+$('de').value, +$('dn').value, +$('du').value];
+const f2=v=>(v<0?'−':'')+Math.abs(v).toFixed(2), f3=v=>(v<0?'−':'')+Math.abs(v).toFixed(3);
+function hsv(p){const h=p*6,i=Math.floor(h)%6,f=h-Math.floor(h),q=1-f,t=f; return [[1,t,0],[q,1,0],[0,1,t],[0,q,1],[t,0,1],[1,0,q]][i];}
+function arrow(ctx,x0,y0,x1,y1,col,w,dash){ ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=w; if(dash)ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); ctx.setLineDash([]); const L=Math.hypot(x1-x0,y1-y0); if(L<2){ctx.restore(); return;}
+  const a=Math.atan2(y1-y0,x1-x0), hl=Math.min(8+w*1.5, L*0.5);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1-hl*Math.cos(a-0.4),y1-hl*Math.sin(a-0.4)); ctx.lineTo(x1-hl*Math.cos(a+0.4),y1-hl*Math.sin(a+0.4)); ctx.closePath(); ctx.fill(); ctx.restore(); }
+function text(ctx,s,x,y,col,font,align){ ctx.fillStyle=col; ctx.font=font||'13px Archivo, sans-serif'; ctx.textAlign=align||'left'; ctx.fillText(s,x,y); ctx.textAlign='left'; }
+
+function drawPlan(d){
+  const c=$('plan'), ctx=c.getContext('2d'), Wd=c.width, H=c.height, cx=Wd/2, cy=H/2; ctx.clearRect(0,0,Wd,H);
+  ctx.strokeStyle=css('--axis'); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,140,0,2*Math.PI); ctx.moveTo(cx-150,cy); ctx.lineTo(cx+150,cy); ctx.moveTo(cx,cy-150); ctx.lineTo(cx,cy+150); ctx.stroke();
+  ['N','E','S','W'].forEach((s,i)=>{ const a=i*90*rad; text(ctx,s,cx+158*Math.sin(a),cy-158*Math.cos(a)+5,css('--muted'),'600 13px Archivo, sans-serif','center'); });
+  for(const k of ['asc','desc']){ const g=G[k], col=css(k==='asc'?'--asc':'--desc'), fh=g.h*rad, lk=(g.h+90)*rad, on=k===cur;
+    arrow(ctx,cx-120*Math.sin(fh),cy+120*Math.cos(fh),cx+120*Math.sin(fh),cy-120*Math.cos(fh),col,on?1.8:1.2,on?null:[5,4]);
+    arrow(ctx,cx-110*Math.sin(lk)+18*Math.sin(fh),cy+110*Math.cos(lk)-18*Math.cos(fh),cx-30*Math.sin(lk)+18*Math.sin(fh),cy+30*Math.cos(lk)-18*Math.cos(fh),col,on?4:2.5);
+    text(ctx,(k==='asc'?'ascending':'descending')+', looks '+Math.round((g.h+90)%360)+'°',cx+128*Math.sin(fh)+(Math.sin(fh)>0?-8:8),cy-128*Math.cos(fh)+(Math.cos(fh)>0?-6:16),col,'600 12px Archivo, sans-serif',Math.sin(fh)>0?'right':'left'); }
+  const m=Math.max(1,Math.hypot(d[0],d[1])), s=90/Math.max(m,2);
+  arrow(ctx,cx,cy,cx+d[0]*s,cy-d[1]*s,css('--ink'),3.2);
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,2*Math.PI); ctx.fillStyle=css('--ink'); ctx.fill();
+  text(ctx,'horizontal '+Math.hypot(d[0],d[1]).toFixed(1)+' cm, up '+f2(d[2])+' cm',10,H-10,css('--muted'),'12px Archivo, sans-serif');
+}
+function drawSide(d){
+  const c=$('side'), ctx=c.getContext('2d'), Wd=c.width, H=c.height; ctx.clearRect(0,0,Wd,H);
+  const g=G[cur], col=css(cur==='asc'?'--asc':'--desc'), th=g.th*rad, h=g.h*rad;
+  $('sidet').textContent='Side view, '+(cur==='asc'?'ascending':'descending')+' pass';
+  const dh=-d[0]*Math.cos(h)+d[1]*Math.sin(h);          // horizontal motion toward the satellite's side
+  const at=d[0]*Math.sin(h)+d[1]*Math.cos(h);            // along-track part, out of this plane
+  const gx=Wd*0.62, gy=H*0.72;                           // ground point; satellite up and to the left
+  ctx.strokeStyle=css('--muted'); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(10,gy); ctx.lineTo(Wd-10,gy); ctx.stroke();
+  const sx=gx-230*Math.sin(th), sy=gy-230*Math.cos(th);
+  ctx.setLineDash([5,4]); ctx.strokeStyle=css('--ghost'); ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx,gy-200); ctx.stroke(); ctx.setLineDash([]);
+  arrow(ctx,gx,gy,sx+12*Math.sin(th),sy+12*Math.cos(th),col,1.5,[3,3]);
+  ctx.fillStyle=col; ctx.fillRect(sx-9,sy-6,18,12); text(ctx,'satellite',sx+14,sy+4,col,'600 12px Archivo, sans-serif');
+  ctx.strokeStyle=css('--muted'); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(gx,gy,46,-Math.PI/2-th,-Math.PI/2); ctx.stroke();
+  text(ctx,'θ = '+g.th.toFixed(1)+'°',gx-16-60*Math.sin(th/2),gy-52*Math.cos(th/2)-4,css('--muted'),'12px Archivo, sans-serif','right');
+  const m=Math.max(1,Math.hypot(dh,d[2])), s=120/m;
+  const ux=-Math.sin(th), uy=-Math.cos(th);              // unit vector toward the satellite, screen coordinates
+  const vx=-dh*s, vy=-d[2]*s;                            // the motion in this plane (toward the satellite is to the left)
+  arrow(ctx,gx,gy,gx+vx,gy+vy,css('--ghost'),3);
+  const L=dh*Math.sin(th)+d[2]*Math.cos(th);
+  ctx.setLineDash([2,3]); ctx.strokeStyle=css('--faint'); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(gx+vx,gy+vy); ctx.lineTo(gx+ux*L*s,gy+uy*L*s); ctx.stroke(); ctx.setLineDash([]);
+  arrow(ctx,gx,gy,gx+ux*L*s,gy+uy*L*s,css('--los'),4);
+  ctx.beginPath(); ctx.arc(gx,gy,4,0,2*Math.PI); ctx.fillStyle=css('--ink'); ctx.fill();
+  text(ctx,'LOS change '+f2(L)+' cm '+(L>=0?'(toward)':'(away)'),10,22,css('--los'),'600 13px Archivo, sans-serif');
+  text(ctx,'along-track part, invisible: '+f2(at)+' cm',10,H-12,css('--muted'),'12px Archivo, sans-serif');
+  text(ctx,'toward the satellite ←',10,gy+20,css('--faint'),'12px Archivo, sans-serif');
+}
+function drawIfg(id,w){
+  const c=$(id), ctx=c.getContext('2d'), N=c.width, d=motion(), img=ctx.createImageData(N,N), L0=dot(w,d);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const X=(x/(N-1)-0.5)*30, Y=(0.5-y/(N-1))*30, b=Math.exp(-(X*X+Y*Y)/(2*36));
+    const away=-L0*b; let p=(away/CYC+0.5)%1; if(p<0)p+=1; const col=hsv(p), o=4*(y*N+x);
+    img.data[o]=255*col[0]; img.data[o+1]=255*col[1]; img.data[o+2]=255*col[2]; img.data[o+3]=255; }
+  ctx.putImageData(img,0,0);
+  ctx.font='600 13px Archivo, sans-serif'; const s='center: '+f2(L0)+' cm, '+(Math.abs(L0)/CYC).toFixed(1)+' fringes';
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.fillRect(6,6,ctx.measureText(s).width+12,22); ctx.fillStyle='#111'; ctx.fillText(s,12,22);
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.fillRect(N-74,N-26,68,20); ctx.fillStyle='#111'; ctx.fillRect(N-68,N-12,56,4); ctx.font='11px Archivo, sans-serif'; ctx.fillText('10 km',N-58,N-15);
+}
+function drawWH(){
+  const c=$('wh'), ctx=c.getContext('2d'), Wd=c.width, H=c.height, l=54, r=16, t=16, b=40; ctx.clearRect(0,0,Wd,H);
+  const X=v=>l+v/360*(Wd-l-r), Y=v=>t+(1-v)/2*(H-t-b), th=G[cur].th;
+  ctx.strokeStyle=css('--rule'); ctx.lineWidth=1; ctx.font='12px Archivo, sans-serif'; ctx.fillStyle=css('--muted');
+  for(let v=-1;v<=1;v+=0.5){ ctx.beginPath(); ctx.moveTo(l,Y(v)); ctx.lineTo(Wd-r,Y(v)); ctx.stroke(); ctx.fillText((v<0?'−':'')+Math.abs(v).toFixed(1),l-34,Y(v)+4); }
+  for(let v=0;v<=360;v+=45){ ctx.beginPath(); ctx.moveTo(X(v),t); ctx.lineTo(X(v),H-b); ctx.stroke(); ctx.fillText(v+'°',X(v)-10,H-b+16); }
+  ctx.fillText('heading α, clockwise from north (N 0°, E 90°, S 180°, W 270°)',l+250,H-6);
+  const ser=[['east','--asc',a=>W({th,h:a})[0]],['north','--los',a=>W({th,h:a})[1]],['up','--up',a=>W({th,h:a})[2]]];
+  ser.forEach(([n,cv,f],i)=>{ ctx.strokeStyle=css(cv); ctx.lineWidth=2.4; ctx.beginPath(); for(let a=0;a<=360;a+=1){ const p=[X(a),Y(f(a))]; a?ctx.lineTo(...p):ctx.moveTo(...p);} ctx.stroke();
+    ctx.fillStyle=css(cv); ctx.font='600 12.5px Archivo, sans-serif'; ctx.fillText(n+' weight',X(i===0?18:i===1?110:300),Y(f(i===0?18:i===1?110:300))-8); });
+  for(const k of ['asc','desc']){ ctx.setLineDash([5,4]); ctx.strokeStyle=css(k==='asc'?'--asc':'--desc'); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X(G[k].h),t); ctx.lineTo(X(G[k].h),H-b); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=css(k==='asc'?'--asc':'--desc'); ctx.font='12px Archivo, sans-serif'; ctx.fillText(k==='asc'?'asc':'desc',X(G[k].h)+(k==='asc'?-28:4),t+12); }
+}
+function tables(){
+  const d=motion(), wa=W(G.asc), wd=W(G.desc), la=dot(wa,d), ld=dot(wd,d);
+  $('wt').innerHTML=`<tr><th>Weight</th><th class="ca">asc</th><th class="cd">desc</th></tr>`+
+    ['east','north','up'].map((n,i)=>`<tr><td>${n}</td><td>${f3(wa[i])}</td><td>${f3(wd[i])}</td></tr>`).join('')+
+    `<tr class="sum"><td>LOS change</td><td>${f2(la)} cm</td><td>${f2(ld)} cm</td></tr>`;
+  $('chk').innerHTML=`<tr><th>1 cm of motion registers as</th><th>Descending, 4 to 16 July</th><th>Ascending, 4 to 10 July</th></tr>`+
+    [['up or down',2],['east or west',0],['north or south',1]].map(([n,i])=>{ const A=ARIA_W.asc[i], D=ARIA_W.desc[i];
+      return `<tr><td>${n}</td><td>${Math.abs(D).toFixed(3)} cm</td><td>${Math.abs(A).toFixed(3)} cm</td></tr>`; }).join('');
+}
+let ARIA_W;
+function syncSliders(){ $('th').value=G[cur].th; $('hd').value=G[cur].h; }
+function draw(){
+  G[cur].th=+$('th').value; G[cur].h=+$('hd').value;
+  $('thv').textContent=G[cur].th.toFixed(1)+'°'; $('hv').textContent=G[cur].h.toFixed(1)+'°';
+  const d=motion(); $('ev').textContent=f2(d[0])+' cm'; $('nv').textContent=f2(d[1])+' cm'; $('uv').textContent=f2(d[2])+' cm';
+  $('cyc').textContent=CYC.toFixed(2)+' cm';
+  drawPlan(d); drawSide(d); drawIfg('ifa',W(G.asc)); drawIfg('ifd',W(G.desc)); drawWH(); tables();
+}
+$('passsel').addEventListener('click',e=>{ const p=e.target.dataset.p; if(!p)return; cur=p; document.querySelectorAll('#passsel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); syncSliders(); draw(); });
+$('rc').onclick=()=>{ ridgecrest(); syncSliders(); draw(); };
+document.querySelectorAll('button[data-v]').forEach(b=>b.onclick=()=>{ const v=b.dataset.v.split(',').map(Number); $('de').value=v[0]; $('dn').value=v[1]; $('du').value=v[2]; draw(); });
+['th','hd','de','dn','du'].forEach(id=>$(id).addEventListener('input',draw));
+ridgecrest(); ARIA_W={asc:W(G.asc), desc:W(G.desc)}; syncSliders(); draw();
+</script>
+</body>
+</html>
