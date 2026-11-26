@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local incidence angle and terrain effects</title>
+<meta name="description" content="Interactive module on the local incidence angle: why slopes facing a radar look brighter, the slant-range squeeze, layover and shadow. A cross-section you can steer, real NISAR and Sentinel-1 images of the Panamint Range, and a simulator on Copernicus and 3DEP elevation models. Built for CIVE 6359.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#E9EDF2; --panel:#FFFFFF; --panel-2:#F3F6F9;
+  --ink:#131A22; --muted:#5B6875; --faint:#8A95A1;
+  --rule:#CFD7E0; --rule-soft:#E2E8EF;
+  --los:#A9500F; --los-soft:#F3E2D0; --track:#0D6379; --track-soft:#D6EAF0;
+  --layover:#B93C18; --shadow:#3B4263; --good:#1D6F4A;
+  --inc:#C2185B; --loc:#B07A00; --terrain:#9C8B72; --terrain-2:#C9BBA4;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06), 0 4px 14px rgba(16,24,34,.05); --r:11px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --los-soft:#3A2C1A; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9; --good:#5CC494;
+  --inc:#F06292; --loc:#FFD166; --terrain:#7D6F5B; --terrain-2:#4A4236;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --panel:#151C25; --panel-2:#1B242F;
+  --ink:#E4EAF1; --muted:#93A0AE; --faint:#6C7A88;
+  --rule:#28323E; --rule-soft:#1F2833;
+  --los:#F0A143; --los-soft:#3A2C1A; --track:#4BC6DD; --track-soft:#12303A;
+  --layover:#F07A4B; --shadow:#9AA0C9; --good:#5CC494;
+  --inc:#F06292; --loc:#FFD166; --terrain:#7D6F5B; --terrain-2:#4A4236;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:Archivo,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5}
+.wrap{max-width:1060px; margin:0 auto; padding:26px 18px 80px}
+a{color:var(--track)}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.crumb{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.crumb a{color:var(--muted); text-decoration:none} .crumb a:hover{color:var(--ink)}
+.themebtn{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--panel); color:var(--muted); border:1px solid var(--rule); border-radius:7px; padding:6px 10px; cursor:pointer}
+h1{font-size:34px; margin:8px 0 0; letter-spacing:-.02em}
+.lede{font-family:Newsreader,Georgia,serif; font-size:19px; color:var(--muted); margin:12px 0 0; max-width:68ch}
+.note{font-size:13px; color:var(--muted); margin-top:10px}
+h2{font-size:13px; font-family:"JetBrains Mono",monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:44px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule)}
+h3{font-size:18px; margin:18px 0 6px}
+p{margin:10px 0; max-width:72ch}
+.serif{font-family:Newsreader,Georgia,serif; font-size:17px}
+.eq{font-family:"JetBrains Mono",monospace; font-size:13px; background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:9px 12px; margin:8px 8px 8px 0; display:inline-block}
+.refresh{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); padding:14px 18px; margin:10px 0}
+.refresh summary{cursor:pointer; font-weight:600; font-size:16px; list-style:none}
+.refresh summary::-webkit-details-marker{display:none}
+.refresh summary::before{content:"\25B8 "; color:var(--track)}
+.refresh[open] summary::before{content:"\25BE "}
+.refresh .body{margin-top:8px}
+.app{display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; margin-top:8px}
+@media (max-width:860px){ .app{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--rule); border-radius:var(--r); box-shadow:var(--shadow-1); padding:14px}
+svg text{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+.cap{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.45}
+.cap b{color:var(--ink)}
+label{display:block; font-size:12.5px; color:var(--muted); margin:12px 0 4px}
+select,input[type=range]{width:100%}
+select{font:inherit; font-size:13.5px; padding:6px; border-radius:7px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink)}
+.val{font-family:"JetBrains Mono",monospace; color:var(--ink); float:right}
+.seg{display:flex; gap:0; margin-top:2px}
+.seg button{flex:1; font:inherit; font-size:12.5px; padding:6px 4px; border:1px solid var(--rule); background:var(--panel-2); color:var(--ink); cursor:pointer}
+.seg button:first-child{border-radius:7px 0 0 7px} .seg button:last-child{border-radius:0 7px 7px 0}
+.seg button+button{border-left:none}
+.seg button.on{background:var(--track); color:#fff; border-color:var(--track)}
+.btn{font:inherit; font-size:12.5px; padding:6px 10px; border:1px solid var(--rule); border-radius:7px; background:var(--panel-2); color:var(--ink); cursor:pointer; margin:6px 6px 0 0}
+.btn:hover{border-color:var(--track)}
+.read{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.stat{background:var(--panel-2); border:1px solid var(--rule-soft); border-radius:8px; padding:7px 10px}
+.stat .k{font-family:"JetBrains Mono",monospace; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:19px; font-weight:600}
+.stat .s{font-size:11.5px; color:var(--muted)}
+.stat.wide{grid-column:1 / -1}
+.banner{font-weight:700; font-size:13px; padding:7px 10px; border-radius:8px; margin-top:12px; border:1px solid var(--rule-soft); background:var(--panel-2)}
+.banner.lay{background:var(--layover); color:#fff; border-color:var(--layover)}
+.banner.sha{background:var(--shadow); color:#fff; border-color:var(--shadow)}
+.row2{display:grid; grid-template-columns:240px minmax(0,1fr); gap:16px; margin-top:16px; align-items:start}
+@media (max-width:700px){ .row2{grid-template-columns:1fr} }
+canvas{display:block; width:100%; height:auto; border-radius:8px; background:#000}
+.viewer{position:relative; touch-action:none}
+.hover{font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--muted); margin-top:8px; min-height:2.8em}
+.legend{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--muted); margin-top:8px; flex-wrap:wrap}
+.legend .bar{height:10px; flex:1; min-width:120px; border-radius:3px}
+.sw{display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px; margin-right:4px}
+ol.try li{margin:6px 0; font-family:Newsreader,Georgia,serif; font-size:16.5px; max-width:72ch}
+table.src{border-collapse:collapse; font-size:13px; margin-top:8px; width:100%}
+table.src td, table.src th{border-bottom:1px solid var(--rule-soft); padding:6px 8px; text-align:left; vertical-align:top}
+table.src th{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.foot{margin-top:46px; padding-top:16px; border-top:1px solid var(--rule); font-size:13px; color:var(--muted); font-family:Newsreader,Georgia,serif}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+@media (max-width:860px){ .two{grid-template-columns:1fr} }
+.chk{display:flex; gap:8px; align-items:center; font-size:13px; margin-top:12px}
+.chk input{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="crumb"><a href="../index.html">Learning</a> / Local incidence angle</div>
+    <button class="themebtn" id="theme">Theme</button>
+  </div>
+  <h1>Local incidence angle and terrain effects</h1>
+  <p class="lede">In a radar image of hills, the slopes that face the satellite often look bright and the slopes that face away look dark, even when the two sides are the same kind of ground. What changes is the angle at which the radar wave meets each slope. Steer that angle yourself on a cross-section, see it in real NISAR and Sentinel-1 images of the Panamint Range, then move it over real elevation models.</p>
+  <p class="note">Goes with <i>SAR, Explained</i> #3, &ldquo;Local incidence angle: when the ground is not flat&rdquo; (the part from 1:48 to 2:23: why facing slopes look brighter, the slant-range squeeze, layover and shadow).</p>
+
+  <h2>The ideas in one screen</h2>
+  <details class="refresh" open><summary>Incidence angle and local incidence angle</summary><div class="body">
+    <p class="serif">The <b>incidence angle</b> &theta; is measured at the ground, between straight up (the local vertical) and the line back to the satellite. On a slope, the line perpendicular to the surface tilts with it. The <b>local incidence angle</b> &theta;<sub>loc</sub> is the angle between that line and the line back to the satellite: the angle at which the wave actually meets the slope.</p>
+    <p class="serif">When a slope tilts straight toward the radar, the local incidence angle shrinks by the slope; when it tilts straight away, it grows by the slope. With an incidence angle of 40&deg; and a 20&deg; slope: facing the radar 20&deg;, facing away 60&deg;. Tilted along the track it changes much less, about 44&deg;.</p>
+    <div class="eq">cos &theta;<sub>loc</sub> = n&#770; &middot; l&#770;</div>
+    <div class="eq">toward: &theta;<sub>loc</sub> = &theta; &minus; &alpha; &nbsp;&middot;&nbsp; away: &theta; + &alpha;</div>
+    <div class="eq">along track: cos &theta;<sub>loc</sub> = cos &theta; &middot; cos &alpha;</div>
+    <p class="cap">n&#770;: unit vector perpendicular to the slope; l&#770;: unit vector from the ground to the satellite; &alpha;: slope angle.</p>
+  </div></details>
+  <details class="refresh"><summary>Why a slope facing the radar usually looks brighter: two reasons</summary><div class="body">
+    <p class="serif"><b>1. Scattering.</b> Unless the ground is very rough, much of the energy carries on forward, away from the radar, the way a low sun glares off a road. The closer to head-on the wave arrives, the larger the share that comes back toward the radar. This page uses the simplest model of a rough surface, Lambert&rsquo;s law, in which the backscatter falls as cos<sup>2</sup>&theta;<sub>loc</sub>. Smoother ground falls off faster with angle; forest in cross-polarization can even rise with angle, which is why the word is &ldquo;usually&rdquo;.</p>
+    <p class="serif"><b>2. The squeeze.</b> The radar sorts echoes by their distance. On a slope facing it, the top and the foot are closer in distance than on level ground (the top is still farther away than the foot, only by less), so the slope fits in fewer pixels and the echoes from all of it add up there. Per kilometre of slope, with 40&deg; incidence and a 20&deg; slope: 0.34 km of slant range facing the radar, 0.64 km on level ground, 0.87 km facing away.</p>
+    <div class="eq">slant range per km of slope = sin &theta;<sub>loc</sub></div>
+    <div class="eq">brightness vs level = [cos&sup2;&theta;<sub>loc</sub> / cos&sup2;&theta;] &times; [sin &theta; / sin &theta;<sub>loc</sub>]</div>
+    <p class="cap">The second formula is for slopes tilted in the range direction. For any other direction the page uses the projection of the slope onto the radar image plane (the &ldquo;image area per unit of slope area&rdquo; in the readouts), which equals sin &theta;<sub>loc</sub> in the range case. It is a teaching model, not a calibrated one.</p>
+  </div></details>
+  <details class="refresh"><summary>Layover and shadow</summary><div class="body">
+    <p class="serif"><b><span class="sw" style="background:var(--layover)"></span>Layover.</b> If a slope facing the radar is steeper than the incidence angle, its top comes back before its foot. The slope is imaged reversed and on top of the ground in front of it.</p>
+    <p class="serif"><b><span class="sw" style="background:var(--shadow)"></span>Shadow.</b> The slope facing away meets the wave farther from head-on, sends less energy back and spreads over more pixels, so it looks dark. If it drops away more steeply than the line to the satellite, that is, steeper than 90&deg; &minus; &theta;, the wave cannot reach it and the image holds only noise there.</p>
+    <div class="eq">layover: &alpha; &gt; &theta; (toward)</div>
+    <div class="eq">shadow: &alpha; &gt; 90&deg; &minus; &theta; (away)</div>
+    <p class="cap">At 40&deg; incidence: layover past 40&deg; toward the radar, shadow past 50&deg; away. For a slope that tilts obliquely, use its tilt in the range direction, tan&alpha;<sub>r</sub> = tan&alpha; &middot; cos&phi;, where &phi; is the angle between the way the slope faces and the direction to the satellite.</p>
+  </div></details>
+
+  <h2>1 &middot; The cross-section</h2>
+  <p class="serif">A slope one kilometre long, seen as in the video: along the track, from behind the satellite. Change the angles, the way the slope faces, which side the radar looks to and the direction of the pass. The strip underneath is the radar image of the same line, laid out by distance from the satellite.</p>
+  <div class="app">
+    <div class="card">
+      <svg id="xs" viewBox="0 0 720 470" width="100%" role="img" aria-label="Cross-section of a slope seen by a radar"></svg>
+      <div class="cap" id="xscap"></div>
+    </div>
+    <div class="card">
+      <label>Incidence angle &theta; <span class="val" id="incv"></span></label>
+      <input type="range" id="inc" min="15" max="60" step="0.5" value="40">
+      <label>Slope &alpha; <span class="val" id="slpv"></span></label>
+      <input type="range" id="slp" min="0" max="85" step="0.5" value="20">
+      <label>The slope faces <span class="val" id="aspv"></span></label>
+      <input type="range" id="asp" min="0" max="359" step="1" value="74">
+      <div>
+        <button class="btn" data-dir="toward">toward the radar</button><button class="btn" data-dir="away">away</button><button class="btn" data-dir="along">along the track</button>
+      </div>
+      <label>Look side</label>
+      <div class="seg" id="look"><button data-v="left" class="on">left (NISAR)</button><button data-v="right">right (Sentinel-1)</button></div>
+      <label>Pass</label>
+      <div class="seg" id="pass"><button data-v="asc" class="on">ascending</button><button data-v="desc">descending</button></div>
+      <div style="margin-top:8px"><button class="btn" id="pre-video">Video example: 40&deg;, 20&deg;</button><button class="btn" id="pre-reset">Level ground</button></div>
+      <div class="banner" id="banner"></div>
+      <div class="read">
+        <div class="stat"><div class="k">local incidence</div><div class="v" id="r-loc"></div><div class="s" id="r-locs"></div></div>
+        <div class="stat"><div class="k">brightness vs level</div><div class="v" id="r-db"></div><div class="s" id="r-dbs"></div></div>
+        <div class="stat"><div class="k">image area per unit slope</div><div class="v" id="r-sq"></div><div class="s" id="r-sqs"></div></div>
+        <div class="stat"><div class="k">tilt in range plane</div><div class="v" id="r-ar"></div><div class="s" id="r-ars"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card">
+      <svg id="map" viewBox="0 0 240 240" width="100%" role="img" aria-label="Map view: pass, look direction and slope"></svg>
+    </div>
+    <div class="card">
+      <p class="serif" id="mapsent" style="margin-top:0"></p>
+      <p class="cap">Map view, north up. Headings are those of a near-polar orbit at mid latitudes: about 344.5&deg; ascending (measured on the NISAR pass over the Panamint Range below) and about 195.5&deg; descending (its mirror image). Sentinel-1 flies a similar orbit. NISAR looks left of its track and Sentinel-1 looks right, so on the same pass direction they light opposite sides of a ridge.</p>
+      <p class="cap">Simplifications: flat Earth, the satellite far enough away that its rays are parallel (it is about 750 km away), one plane slope between level ground. Brightness uses Lambert&rsquo;s cos&sup2; law and ignores the noise floor, the antenna pattern and anything not on the slope.</p>
+    </div>
+  </div>
+  <h3>Try this</h3>
+  <ol class="try">
+    <li>Press <b>Video example</b>. Read the local incidence angle and the slant range per kilometre for the three directions (toward, away, along the track). You should get 20&deg; and 0.34 km, 60&deg; and 0.87 km, and about 44&deg;. Count the equally spaced range lines that each slope crosses.</li>
+    <li>Keep the slope facing the radar and raise it slowly past 40&deg;. Watch the strip: when does the top land before the foot? Now lower the incidence angle to 30&deg;. At what slope does layover start now?</li>
+    <li>Make the slope face away and steepen it. Where does shadow start at 40&deg; incidence? At 25&deg;? Which kind of mission (small or large incidence angles) suffers more from shadow, and which from layover?</li>
+    <li>Make the slope face east (90&deg;) with the ascending pass. Switch the look side from left to right. Then switch the pass. Which two combinations see the same slope as facing the radar? This is why ascending and descending passes see different sides of a mountain.</li>
+  </ol>
+
+  <h2>2 &middot; Real data: the Panamint Range</h2>
+  <p class="serif">The west wall of Death Valley, California (36.2&deg; N, 117.1&deg; W): steep, bare and dry, the same kind of rock and alluvium on both sides of the ridges. NISAR saw it on 19 October 2026 on an ascending pass, looking left, so the satellite was to the east-north-east and east-facing slopes face the radar. Drag the divider to compare two layers on the same 20 km square.</p>
+  <div class="app">
+    <div class="card">
+      <div class="viewer"><canvas id="pv" width="800" height="800"></canvas></div>
+      <div class="hover" id="phov">Move over the image to read the values at that point (40 m cells).</div>
+      <div class="legend" id="plegend"></div>
+      <div class="cap"><b>NISAR L2, track 106, frame 20, ascending, 19 Oct 2026, HH.</b> Left-looking; incidence 39.3&deg; at the centre of the crop. North up, 20 km across, UTM zone 11 N. GSLC and GCOV are shown with the same stretch, &minus;17 to 9 dB; the GSLC is averaged 2 &times; 2 to 4 looks, like the GCOV. GSLC is placed on the map with a DEM but its brightness is not corrected for the slopes; GCOV &gamma;<sup>0</sup> is radiometrically terrain-corrected with the Copernicus 30 m DEM. Both are provisional products.</div>
+    </div>
+    <div class="card">
+      <label>Left of the divider</label>
+      <select id="pl"></select>
+      <label>Right of the divider</label>
+      <select id="pr"></select>
+      <label>Divider <span class="val" id="psv"></span></label>
+      <input type="range" id="ps" min="0" max="100" step="1" value="50">
+      <h3 style="font-size:15px">Facing vs away, measured</h3>
+      <label>Steepest slopes only: at least <span class="val" id="mslv"></span></label>
+      <input type="range" id="msl" min="5" max="40" step="1" value="15">
+      <label>Facing / away: local incidence at least <span class="val" id="mmgv"></span> below / above &theta;</label>
+      <input type="range" id="mmg" min="2" max="25" step="1" value="10">
+      <div class="read">
+        <div class="stat"><div class="k">GSLC (before)</div><div class="v" id="m-g"></div><div class="s">facing minus away</div></div>
+        <div class="stat"><div class="k">GCOV (after)</div><div class="v" id="m-c"></div><div class="s">facing minus away</div></div>
+        <div class="stat wide"><div class="s" id="m-n"></div></div>
+      </div>
+      <p class="cap">Medians of the dB values, on this page&rsquo;s 40 m cells. On the full 10 m grid, with the default settings (slopes of 15&deg; or more, 10&deg; either side), the Video Office measured <b>10.7 dB before</b> and <b>1.0 dB after</b> terrain correction.</p>
+    </div>
+  </div>
+  <div class="two">
+    <div class="card">
+      <svg id="chart" viewBox="0 0 520 330" width="100%" role="img" aria-label="Brightness against local incidence angle"></svg>
+      <div class="cap">Median brightness in 5&deg; bins of local incidence angle, from this page&rsquo;s 40 m cells (only cells with the slope set on the left). <span class="sw" style="background:var(--los)"></span>GSLC, before terrain correction. <span class="sw" style="background:var(--track)"></span>GCOV, after. Dashed: this page&rsquo;s teaching model for slopes tilted in range, pinned to the GSLC median at the incidence angle and not fitted. The model gets the direction right; on the steepest slopes facing away it falls faster than the measurements, which the page does not try to explain. After the correction what is left is U-shaped, not &ldquo;facing still brighter&rdquo;.</div>
+    </div>
+    <div class="card">
+      <canvas id="s1" width="1000" height="990" style="background:#000"></canvas>
+      <div class="cap"><b>Sentinel-1C, IW GRD, VV, ascending, 25 Nov 2026.</b> Right-looking, so the satellite was to the west-south-west and <b>west-facing</b> slopes face the radar: the opposite of NISAR on the same pass direction. Radar geometry, not terrain-corrected: the file is flipped so north is roughly up (the image axes follow the orbit, about 15&deg; off north), and the slopes keep their squeeze. Amplitude in dB, stretched for display, not calibrated. About 23 km across.</div>
+    </div>
+  </div>
+  <h3>Try this</h3>
+  <ol class="try">
+    <li>Put <b>GSLC</b> on the left and <b>local incidence angle</b> on the right. Drag the divider across a ridge: do the bright slopes line up with the warm colours (small local incidence)?</li>
+    <li>Now GSLC against <b>GCOV</b>. What did the terrain correction remove? Hover over a pair of facing and away slopes and write down both values in each product.</li>
+    <li>Compare the NISAR GSLC with the Sentinel-1 image. Pick one big ridge: which side is bright in each, and why? (Hint: look side.)</li>
+    <li>Change the slope threshold of the measurement to 5&deg; and to 30&deg;. Why does the facing-minus-away difference grow with the threshold in the GSLC but not in the GCOV?</li>
+    <li>Choose <b>Simulated</b> on one side. It is the teaching model of part 3, run on the Copernicus DEM with NISAR&rsquo;s geometry for that day. What does it get right, and what does it miss?</li>
+  </ol>
+
+  <h2>3 &middot; Simulate on a real elevation model</h2>
+  <p class="serif">The same model as the cross-section, run on every cell of a real elevation model: local incidence angle, layover and shadow, and the brightness the radar would record, both on the map and in the radar&rsquo;s own geometry, where the squeeze and the layover show.</p>
+  <div class="app">
+    <div class="card">
+      <div class="viewer"><canvas id="sv" width="700" height="700"></canvas></div>
+      <div class="hover" id="shov">Move over the image to read the values at that point.</div>
+      <div class="legend" id="slegend"></div>
+      <div class="cap" id="scap"></div>
+    </div>
+    <div class="card">
+      <label>Terrain</label>
+      <select id="site"></select>
+      <label>Elevation model</label>
+      <div class="seg" id="dem"><button data-v="cop30" class="on">Copernicus 30 m</button><button data-v="3dep">USGS 3DEP 10 m</button></div>
+      <label>Show</label>
+      <select id="view">
+        <option value="map">brightness on the map (before terrain correction)</option>
+        <option value="radar">brightness in radar geometry (slant range)</option>
+        <option value="loc">local incidence angle</option>
+        <option value="mask">layover and shadow</option>
+        <option value="hgt">height</option>
+      </select>
+      <div class="chk"><input type="checkbox" id="speck"><span>add speckle (4 looks, like the NISAR images)</span></div>
+      <label>Incidence angle &theta; <span class="val" id="sincv"></span></label>
+      <input type="range" id="sinc" min="15" max="60" step="0.5" value="40">
+      <label>Look side</label>
+      <div class="seg" id="slook"><button data-v="left" class="on">left (NISAR)</button><button data-v="right">right (Sentinel-1)</button></div>
+      <label>Pass</label>
+      <div class="seg" id="spass"><button data-v="asc" class="on">ascending</button><button data-v="desc">descending</button></div>
+      <div><button class="btn" id="pre-nisar">NISAR, 19 Oct 2026 (39.3&deg;)</button></div>
+      <div class="read">
+        <div class="stat"><div class="k">layover</div><div class="v" id="st-l"></div><div class="s">of the area</div></div>
+        <div class="stat"><div class="k">shadow</div><div class="v" id="st-s"></div><div class="s">of the area</div></div>
+        <div class="stat"><div class="k">facing the radar</div><div class="v" id="st-f"></div><div class="s">&theta;<sub>loc</sub> &lt; &theta;</div></div>
+        <div class="stat"><div class="k">cell size</div><div class="v" id="st-d"></div><div class="s" id="st-ds"></div></div>
+      </div>
+      <p class="cap">The incidence angle, look side and pass are shared with the cross-section above.</p>
+    </div>
+  </div>
+  <h3>Try this</h3>
+  <ol class="try">
+    <li>On <b>Mount Rainier</b>, show <b>layover and shadow</b>. Move the incidence angle from 20&deg; to 55&deg; and note both percentages. Is there an angle with little of either?</li>
+    <li>Switch between <b>brightness on the map</b> and <b>in radar geometry</b>. Where do the slopes facing the radar go in the radar image, and why are they thinner and brighter there?</li>
+    <li>On <b>Enchanted Rock</b>, which faces every direction at once, flip the pass and then the look side. Which side of the dome lights up each time?</li>
+    <li>On the <b>Panamint Range</b>, compare Copernicus 30 m with 3DEP 10 m. Where do the local incidence angles differ most? A terrain correction is only as good as the elevation model it uses.</li>
+  </ol>
+
+  <h2>Sources</h2>
+  <table class="src">
+    <tr><th>What</th><th>Source</th></tr>
+    <tr><td>Smaller local incidence angle, higher backscatter, for a given roughness and permittivity</td><td>Kaupp, Waite and MacDonald (1982), IEEE TGRS GE-20(3), p. 386; Richards (2009), <i>Remote Sensing with Imaging Radar</i>, Springer, pp. 140&ndash;141. Exception (forest cross-polarization): Tanase et al. (2010), p. 9.</td></tr>
+    <tr><td>Most energy carries on forward unless the ground is very rough</td><td>Richards (2009) p. 139, Fig. 5.4; Ulaby and Long (2014), <i>Microwave Radar and Radiometric Remote Sensing</i>, p. 197.</td></tr>
+    <tr><td>Lambert&rsquo;s law, &sigma;<sup>0</sup> = &sigma;<sup>0</sup><sub>0</sub> cos&sup2;&theta;</td><td>Richards (2009), eq. 5.5b, p. 140.</td></tr>
+    <tr><td>Facing slopes bright from the small local incidence angle and the compression; slopes facing away very low returns</td><td>Liu, Wang and Jezek (2006), p. 4; Kaupp et al. (1982), p. 385.</td></tr>
+    <tr><td>Slope correction factor sin&theta;<sub>loc</sub> / sin&theta; (range-tilted slopes); projection onto the image plane for any slope</td><td>Small (2011), IEEE TGRS 49(8), 3081&ndash;3093, eq. 5, <a href="https://doi.org/10.1109/TGRS.2011.2120616">doi:10.1109/TGRS.2011.2120616</a>; Ulander (1996), IEEE TGRS 34(5), 1115&ndash;1122, <a href="https://doi.org/10.1109/36.536527">doi:10.1109/36.536527</a>.</td></tr>
+    <tr><td>Layover when a facing slope is steeper than &theta;; shadow when a slope facing away is steeper than 90&deg; &minus; &theta;</td><td>Schreier (1993), <i>SAR Geocoding: Data and Systems</i>, eq. 4.11b; Blom and Elachi (1981), p. 15; Ulaby and Long (2014), p. 727.</td></tr>
+    <tr><td>&gamma;<sup>0</sup> products still depend on the local incidence angle; use the angle maps provided</td><td>Kellndorfer et al. (2022), <i>Scientific Data</i>, p. 13.</td></tr>
+    <tr><td>NISAR GCOV is terrain-corrected with the Copernicus 30 m DEM</td><td>Rosen et al. (2025), The NASA-ISRO SAR mission: a summary, IEEE GRSM 13(2), 8&ndash;34, Fig. 9 caption, p. 20, <a href="https://doi.org/10.1109/MGRS.2025.3578258">doi:10.1109/MGRS.2025.3578258</a>.</td></tr>
+    <tr><td>Worked numbers (20&deg;, 60&deg;, 44&deg;; 0.34, 0.64, 0.87 km; shadow past 50&deg;; 10.7 and 1.0 dB)</td><td>Computed and checked for <i>SAR, Explained</i> #3; the dB values measured on the NISAR rasters by the Video Office.</td></tr>
+  </table>
+
+  <div class="foot">
+    <p>Built for <b>CIVE 6359 &mdash; SAR Remote Sensing</b>, University of Houston, RiSE Lab, to go with <i>SAR, Explained</i> #3.</p>
+    <p>NISAR L2 GSLC and GCOV (provisional), track 106, frame 20, 19 Oct 2026: NASA/JPL-Caltech and ISRO, distributed by the Alaska Satellite Facility DAAC. Contains modified Copernicus Sentinel data (2026), Sentinel-1C GRD via the Microsoft Planetary Computer. Copernicus DEM GLO-30, &copy; DLR e.V. 2010&ndash;2014 and &copy; Airbus Defence and Space GmbH 2014&ndash;2018, provided under COPERNICUS by the European Union and ESA; all rights reserved. USGS 3D Elevation Program 1/3 arc-second DEM, public domain. Elevation tiles were resampled to the grids shown here; the build script is in <code>build/</code>.</p>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
